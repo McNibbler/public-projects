@@ -1,8 +1,8 @@
 #########################
 # Convolution Simulator #
-# Version 1.1           #
+# Version 1.2           #
 #                       #
-# January 26, 2018      #
+# February 1, 2018      #
 # Thomas Kaunzinger     #
 # XCerra Corp.          #
 #########################
@@ -22,9 +22,9 @@ t <- 0:(npts - 1) * dt
 freq <- 20 # 5 peaks over 250ms
 omega <- 2 * pi * freq
 
-wave.1 <- c(integer(25),integer(3) + 10, integer(44), integer(3) + 10, integer(npts - 75))
+wave.1 <- c(integer(25),integer(3) + 10, integer(9), integer(3) + 10, integer(npts - 40))
 #wave.1 <- c(integer(25),integer(3) + 10, integer(44), integer(3) + 10, integer(72), integer (3) + 10, integer(npts - 150))
-wave.2 <- c(integer(25),integer(3) + 10, integer(44), integer(3) + 10, integer(75), sin(omega*t[150:(npts - 1)]))
+wave.2 <- c(integer(25),integer(3) + 10, integer(9), integer(3) + 10, integer(75), sin(omega*t[115:(npts - 1)]))
 
 # Generate UI
 ui <- fluidPage(
