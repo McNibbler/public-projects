@@ -1,0 +1,177 @@
+#########################
+# Convolution Simulator #
+# Version 1.1           #
+#                       #
+# January 26, 2018      #
+# Thomas Kaunzinger     #
+# XCerra Corp.          #
+#########################
+
+# Libraries
+library(shiny)
+
+# Wave Generation
+sample.rate <- 2048
+npts <- 512
+
+# Time Axis
+dt = 1/npts
+t <- 0:(npts - 1) * dt
+
+# Creating the sine waves
+freq <- 20 # 5 peaks over 250ms
+omega <- 2 * pi * freq
+
+wave.1 <- c(integer(25),integer(3) + 10, integer(44), integer(3) + 10, integer(npts - 75))
+#wave.1 <- c(integer(25),integer(3) + 10, integer(44), integer(3) + 10, integer(72), integer (3) + 10, integer(npts - 150))
+wave.2 <- c(integer(25),integer(3) + 10, integer(44), integer(3) + 10, integer(75), sin(omega*t[150:(npts - 1)]))
+
+# Generate UI
+ui <- fluidPage(
+  
+  # Title
+  titlePanel("Convolution Simulator: C = X*Y"),
+  
+  # Slider to move sine wave along
+  sidebarLayout(
+    
+    sidebarPanel(
+      
+      sliderInput("index", h3("Step Number:"),
+                  min = 1, max = 2*npts - 1, value = 1, animate = animationOptions(interval = 200)),
+      
+      # Plots the reverse sliding graph for visualization
+      plotOutput("slidingWave"),
+      
+      # Plots the original wave that's getting convoluted
+      plotOutput("staticWave"),
+      
+      # Plots the original wave that's convoluting
+      plotOutput("slidingOriginal")
+    
+    ),
+  
+    # Graphical output for the final convolution
+    mainPanel(
+      
+      plotOutput("convolution"),
+      plotOutput("both")
+    
+    
+    )
+  )
+  
+)
+
+server <- function(input, output){
+  
+  # Makes the waves the same length
+  wave.1.zeros <- c(wave.1,integer(length(wave.2 - 1)))
+  wave.2.zeros <- c(wave.2,integer(length(wave.1 - 1)))
+  
+  # Determines the length of the convolution
+  conv.length <- 2*npts - 1
+  
+  # Initializes the convolution vector with zeros
+  convolution <- integer(conv.length)
+  
+  # axis
+  t.2 <- 1:conv.length
+  
+  # Supposedly the actual convolution happens here
+  for (i in 1:conv.length){
+    for (j in 1:i){
+      convolution[i] <- convolution[i] + wave.2.zeros[j]*wave.1.zeros[i - j + 1]
+    }
+  }
+  
+  
+
+  
+  
+  output$slidingWave <- renderPlot({
+    
+    wave.1.trimmed <- rev(wave.1)
+    t.trimmed <- t - (npts - input$index) * dt
+    # Renders the sliding convoluding wave
+    plot(t.trimmed*1000, wave.1.trimmed, "l", xlab = "Time (ms)", ylab = expression(paste("Y( t - ", tau,")")), col = "blue", xlim = c(0,max(t)*1000), ylim = c(-1*max(max(wave.2),max(wave.1)),max(max(wave.2),max(wave.1))), main = "Reverse Sliding Y")
+    
+    
+  })
+  
+  
+  output$staticWave <- renderPlot({
+    
+    # Renders the original convoluted wave
+    plot(t*1000, wave.2, "l", xlab = "Time (ms)", ylab = "X(t)", col = "cyan", xlim = c(0,max(t)*1000), ylim = c(-1*max(max(wave.2),max(wave.1)),max(max(wave.2),max(wave.1))), main = "X (Original)")
+    
+  })
+  
+  output$slidingOriginal <- renderPlot({
+    
+    # Renders the original convoluting wave
+    plot(t*1000, wave.1, "l", xlab = "Time (ms)", ylab = "Y(t)", col = "purple", xlim = c(0,max(t)*1000), ylim = c(-1*max(max(wave.2),max(wave.1)),max(max(wave.2),max(wave.1))), main = "Y (Original)")
+    
+  })
+  
+  output$both <- renderPlot({
+    
+    wave.1.trimmed <- rev(wave.1)
+    t.trimmed <- t - (npts - input$index) * dt
+    
+    plot(t*1000, wave.2, "l", xlab = "", ylab = "Signals", col = "green", xlim = c(0,max(t)*1000), ylim = c(-1*max(max(wave.2),max(wave.1)),max(max(wave.2),max(wave.1))), main = "Both Waves")
+    lines(t.trimmed*1000, wave.1.trimmed, col = "magenta")
+    
+    
+    
+  })
+  
+  
+  output$convolution <- renderPlot({
+    
+    ##########################################################################################
+    # IN RETROSPECT I PROBABLY SHOULDN'T RECALCULATE THIS EVERY TIME THE FUNCTION WAS CALLED #
+    ##########################################################################################
+    
+    ## Makes the waves the same length
+    #wave.1.zeros <- c(wave.1,integer(length(wave.2 - 1)))
+    #wave.2.zeros <- c(wave.2,integer(length(wave.1 - 1)))
+    
+    ## Determines the length of the convolution
+    #conv.length <- 2*npts - 1
+    
+    ## Initializes the convolution vector with zeros
+    #convolution <- integer(conv.length)
+    
+    ## axis
+    #t.2 <- 1:conv.length
+    
+    ## Supposedly the actual convolution happens here
+    #for (i in 1:conv.length){
+
+    #  for (j in 1:i){
+
+    #    convolution[i] <- convolution[i] + wave.2.zeros[j]*wave.1.zeros[i - j + 1]
+        
+    #  }
+      
+    #}
+    
+    
+    
+    
+    # Plots the graph at the current step
+    plot(t.2[0:input$index],convolution[0:input$index], xlab = "t", ylab = "C(t)", "b", col = "turquoise", main = "C = X*Y", xlim = c(0,conv.length))
+    
+  })
+  
+  
+  
+}
+
+
+# Launches the Application
+shinyApp(ui, server)
+
+
+
