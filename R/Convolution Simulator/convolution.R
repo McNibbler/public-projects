@@ -1,8 +1,8 @@
 #########################
 # Convolution Simulator #
-# Version 1.2           #
+# Version 1.3           #
 #                       #
-# February 1, 2018      #
+# February 2, 2018      #
 # Thomas Kaunzinger     #
 # XCerra Corp.          #
 #########################
@@ -55,7 +55,8 @@ ui <- fluidPage(
     mainPanel(
       
       plotOutput("convolution"),
-      plotOutput("both")
+      plotOutput("both"),
+      plotOutput("area")
     
     
     )
@@ -85,8 +86,10 @@ server <- function(input, output){
     }
   }
   
+  rows <- conv.length
+  columns <- conv.length
+  area <- matrix(integer(conv.length^2), nrow = rows, ncol = columns, byrow = TRUE)
   
-
   
   
   output$slidingWave <- renderPlot({
@@ -129,42 +132,32 @@ server <- function(input, output){
   
   output$convolution <- renderPlot({
     
-    ##########################################################################################
-    # IN RETROSPECT I PROBABLY SHOULDN'T RECALCULATE THIS EVERY TIME THE FUNCTION WAS CALLED #
-    ##########################################################################################
-    
-    ## Makes the waves the same length
-    #wave.1.zeros <- c(wave.1,integer(length(wave.2 - 1)))
-    #wave.2.zeros <- c(wave.2,integer(length(wave.1 - 1)))
-    
-    ## Determines the length of the convolution
-    #conv.length <- 2*npts - 1
-    
-    ## Initializes the convolution vector with zeros
-    #convolution <- integer(conv.length)
-    
-    ## axis
-    #t.2 <- 1:conv.length
-    
-    ## Supposedly the actual convolution happens here
-    #for (i in 1:conv.length){
-
-    #  for (j in 1:i){
-
-    #    convolution[i] <- convolution[i] + wave.2.zeros[j]*wave.1.zeros[i - j + 1]
-        
-    #  }
-      
-    #}
-    
-    
-    
-    
     # Plots the graph at the current step
     plot(t.2[0:input$index],convolution[0:input$index], xlab = "t", ylab = "C(t)", "b", col = "turquoise", main = "C = X*Y", xlim = c(0,conv.length))
     
   })
   
+  output$area <- renderPlot({
+    
+    wave.1.trimmed <- rev(wave.1)
+    
+    if (input$index > npts){
+      
+      wave.1.trimmed <- c(integer(npts - input$index),wave.1.trimmed[1:(conv.length - input$index)])
+      
+    }
+    else{
+      
+      wave.1.trimmed <- c(wave.1.trimmed[1:input$index], integer(npts - input$index))
+      
+    }
+    
+    area <- wave.1.trimmed * wave.2
+    
+    plot(t*1000, area, "l", xlab = expression(tau), ylab = "Area", col = "red", main = expression(paste("X( ", tau,")*Y(t - ",tau,")"))) 
+    
+    
+  })
   
   
 }
