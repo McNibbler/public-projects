@@ -1,8 +1,8 @@
 #####################################
 # Polynomial Harmonic Visualization #
-# Version 1.0                       #
+# Version 1.1                       #
 #                                   #
-# January 26, 2018                  #
+# February 2, 2018                  #
 # Thomas Kaunzinger                 #
 # XCerra Corp.                      #
 #####################################
@@ -19,7 +19,7 @@ library(SynchWave)
 # Converts a number from volts to decibels
 # Given 0.1V, expect -20dB
 todb <- function(volts){
-  20*log10(volts)
+  20*log10(abs(volts))
 }
 
 # tovolt: number -> number
@@ -35,7 +35,7 @@ tovolt <- function(db){
 
 
 # Creating the sine waves
-sample.rate = 65536/8
+sample.rate = 65536/16
 npts = 1024/2
 
 dt = 1/npts
@@ -62,9 +62,10 @@ harmonics.4 <- tovolt(-100)*cos(4*omega*t)
 harmonics.5 <- tovolt(-100)*cos(5*omega*t)
 harmonics.6 <- tovolt(-100)*cos(6*omega*t)
 
-
+# There's definitely a better way to do this but I really didn't feel like bothering with matricies right now
 signal <- fundamental + harmonics.2 + harmonics.3 + harmonics.4 + harmonics.5 + harmonics.6
 
+# FFT of the signals
 f.signal <- fft(signal) / npts
 f.signal.db <- todb(abs(f.signal))
 
@@ -72,7 +73,7 @@ f.fundamental <- fft(fundamental) / npts
 f.signal.harmonics <- f.signal - f.fundamental
 f.signal.harmonics.db <- todb(f.signal.harmonics)
 
-
+# Plots results on a pdf
 pdf("results.pdf", width = 15, height = 10)
 
 par(mfrow = c(2,3))
@@ -80,10 +81,10 @@ par(mfrow = c(2,3))
 plot(t*1000,signal, "l", xlab = "Time (ms)", ylab = "Magnitude (V)", main = "Signal", col = "green")
 grid(nx = NULL, col = "gray")
 
-plot(f.shift/1000,fftshift(f.signal), "l", xlab = "F (kHz)", ylab = "Magnitude (V)", main = "FFT", col = "yellow")
+plot(f.shift/1000,abs(fftshift(f.signal)), "l", xlab = "F (kHz)", ylab = "Magnitude (V)", main = "FFT", col = "yellow")
 grid(nx = NULL, col = "gray")
 
-plot(f.shift/1000,fftshift(f.signal.harmonics), "l", xlab = "F (kHz)", ylab = "Magnitude (V)", main = "FFT (harmonics)", col = "yellow")
+plot(f.shift/1000,abs(fftshift(f.signal.harmonics)), "l", xlab = "F (kHz)", ylab = "Magnitude (V)", main = "FFT (harmonics)", col = "yellow")
 grid(nx = NULL, col = "gray")
 
 plot(f.shift/1000,fftshift(f.signal.db), "l", xlab = "F (kHz)", ylab = "Magnitude (V)", main = "FFT (dB)", col = "purple")
@@ -92,7 +93,7 @@ grid(nx = NULL, col = "gray")
 plot(f.shift/1000,fftshift(f.signal.harmonics.db), "l", xlab = "F (kHz)", ylab = "Magnitude (V)", main = "FFT (dB) (harmonics)", col = "blue")
 grid(nx = NULL, col = "gray")
 
-plot(t*1000,fft(f.signal.harmonics, inverse = TRUE), "l", xlab = "Time (ms)", ylab = "Magnitude (V)", main = "Signal (No Fundamental)", col = "turquoise")
+plot(t*1000,Re(fft(f.signal.harmonics, inverse = TRUE)), "l", xlab = "Time (ms)", ylab = "Magnitude (V)", main = "Signal (No Fundamental)", col = "turquoise")
 grid(nx = NULL, col = "gray")
 
 dev.off()
