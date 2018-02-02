@@ -1,0 +1,12 @@
+name: Convolution-Simulator
+title: Convolution-Simulator
+username:
+account: mcnibbler
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 270293
+bundleId: 1204712
+url: https://mcnibbler.shinyapps.io/Convolution-Simulator/
+when: 1517585184.73877
+asMultiple: FALSE
+asStatic: FALSE
