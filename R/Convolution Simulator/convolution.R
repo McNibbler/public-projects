@@ -1,6 +1,6 @@
 #########################
 # Convolution Simulator #
-# Version 1.3           #
+# Version 2.0           #
 #                       #
 # February 2, 2018      #
 # Thomas Kaunzinger     #
@@ -22,11 +22,15 @@ t <- 0:(npts - 1) * dt
 freq <- 20 # 5 peaks over 250ms
 omega <- 2 * pi * freq
 
-wave.1 <- c(integer(25),integer(3) + 10, integer(9), integer(3) + 10, integer(npts - 40))
+wave.1 <- c(integer(25),integer(3) + 10, integer(9), integer(3) + 10, integer(297), integer(3) + 5, integer(npts - 340))
 #wave.1 <- c(integer(25),integer(3) + 10, integer(44), integer(3) + 10, integer(72), integer (3) + 10, integer(npts - 150))
 wave.2 <- c(integer(25),integer(3) + 10, integer(9), integer(3) + 10, integer(75), sin(omega*t[115:(npts - 1)]))
 
-# Generate UI
+
+################
+# Generates UI #
+################
+
 ui <- fluidPage(
   
   # Title
@@ -38,7 +42,7 @@ ui <- fluidPage(
     sidebarPanel(
       
       sliderInput("index", h3("Step Number:"),
-                  min = 1, max = 2*npts - 1, value = 1, animate = animationOptions(interval = 200)),
+                  min = 1, max = 2*npts - 1, value = 1, animate = animationOptions(interval = 250)),
       
       # Plots the reverse sliding graph for visualization
       plotOutput("slidingWave"),
@@ -51,7 +55,7 @@ ui <- fluidPage(
     
     ),
   
-    # Graphical output for the final convolution
+    # Graphical output for the final convolution and visualizing plots
     mainPanel(
       
       plotOutput("convolution"),
@@ -63,6 +67,11 @@ ui <- fluidPage(
   )
   
 )
+
+
+############################
+# Server Side Calculations #
+############################
 
 server <- function(input, output){
   
@@ -86,16 +95,12 @@ server <- function(input, output){
     }
   }
   
-  rows <- conv.length
-  columns <- conv.length
-  area <- matrix(integer(conv.length^2), nrow = rows, ncol = columns, byrow = TRUE)
-  
-  
   
   output$slidingWave <- renderPlot({
     
     wave.1.trimmed <- rev(wave.1)
     t.trimmed <- t - (npts - input$index) * dt
+    
     # Renders the sliding convoluding wave
     plot(t.trimmed*1000, wave.1.trimmed, "l", xlab = "Time (ms)", ylab = expression(paste("Y( t - ", tau,")")), col = "blue", xlim = c(0,max(t)*1000), ylim = c(-1*max(max(wave.2),max(wave.1)),max(max(wave.2),max(wave.1))), main = "Reverse Sliding Y")
     
@@ -119,13 +124,12 @@ server <- function(input, output){
   
   output$both <- renderPlot({
     
+    # Renders wave 1 sliding against wave 2
     wave.1.trimmed <- rev(wave.1)
     t.trimmed <- t - (npts - input$index) * dt
     
     plot(t*1000, wave.2, "l", xlab = "", ylab = "Signals", col = "green", xlim = c(0,max(t)*1000), ylim = c(-1*max(max(wave.2),max(wave.1)),max(max(wave.2),max(wave.1))), main = "Both Waves")
     lines(t.trimmed*1000, wave.1.trimmed, col = "magenta")
-    
-    
     
   })
   
@@ -139,22 +143,29 @@ server <- function(input, output){
   
   output$area <- renderPlot({
     
-    wave.1.trimmed <- rev(wave.1)
+    # Initializes a vector of zeros
+    wave.1.trimmed <- integer(npts)
     
+    # selects range for sliding wave based on inputs
     if (input$index > npts){
       
-      wave.1.trimmed <- c(integer(npts - input$index),wave.1.trimmed[1:(conv.length - input$index)])
+      wave.1.trimmed[(input$index - npts):npts] <- rev(wave.1[(input$index - npts):npts])
       
     }
     else{
       
-      wave.1.trimmed <- c(wave.1.trimmed[1:input$index], integer(npts - input$index))
+      wave.1.trimmed[1:input$index] <- rev(wave.1[1:input$index])
       
     }
     
+    # Calculates the area at each point
     area <- wave.1.trimmed * wave.2
     
-    plot(t*1000, area, "l", xlab = expression(tau), ylab = "Area", col = "red", main = expression(paste("X( ", tau,")*Y(t - ",tau,")"))) 
+    # Determines the limits for the axes
+    max.area <- max(abs(wave.2))*max(abs(wave.1))
+    
+    # Plots the areas at every point at any given t
+    plot(t*1000, area, "l", xlab = expression(tau), ylab = "Area", col = "skyblue", main = expression(paste("X( ", tau,")*Y( t - ",tau,")")), ylim = c(-1*max.area, max.area))
     
     
   })
