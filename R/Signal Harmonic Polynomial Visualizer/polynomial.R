@@ -53,7 +53,7 @@ freq <- 1008 # 8 peaks over 250ms
 omega <- 2 * pi * freq
 
 peaks <- sample.rate / npts
-period <- 1:(npts / (peaks) + 1)
+period <- 1:(npts / (peaks*2))
 
 # Fundamental Frequency
 fundamental <- cos(omega*t)
@@ -78,14 +78,19 @@ f.signal.harmonics.db <- todb(f.signal.harmonics)
 
 wave.no.fundamental <- Re(fft(f.signal.harmonics, inverse = TRUE))
 wave.no.fundamental.trimmed <- wave.no.fundamental[period]
-fit.6 <- lm(wave.no.fundamental.trimmed~poly(period, 100, raw = TRUE))
+fit.6 <- lm(wave.no.fundamental.trimmed~poly(period, 12, raw = TRUE))
 
+fit.6 <- unname(predict(fit.6, data.frame(x = t)))
+
+poly.expand <- rep(fit.6, length.out = npts)
+f.poly.expand <- fft(poly.expand) / npts
+f.poly.expand.db <- todb(abs(f.poly.expand))
 
 
 # Plots results on a pdf
 pdf("results.pdf", width = 15, height = 10)
 
-par(mfrow = c(3,3))
+par(mfrow = c(3,4))
 
 plot(t*1000,signal, "l", xlab = "Time (ms)", ylab = "Magnitude (V)", main = "Signal", col = "green")
 grid(nx = NULL, col = "gray")
@@ -93,13 +98,13 @@ grid(nx = NULL, col = "gray")
 plot(f.shift/1000,abs(fftshift(f.signal)), "l", xlab = "F (kHz)", ylab = "Magnitude (V)", main = "FFT", col = "yellow")
 grid(nx = NULL, col = "gray")
 
-plot(f.shift/1000,abs(fftshift(f.signal.harmonics)), "l", xlab = "F (kHz)", ylab = "Magnitude (V)", main = "FFT (harmonics)", col = "orange")
+plot(f.shift/1000,abs(fftshift(f.signal.harmonics)), "l", xlab = "F (kHz)", ylab = "Magnitude (V)", main = "FFT (Harmonics)", col = "orange")
 grid(nx = NULL, col = "gray")
 
 plot(f.shift/1000,fftshift(f.signal.db), "l", xlab = "F (kHz)", ylab = "Magnitude (V)", main = "FFT (dB)", col = "purple")
 grid(nx = NULL, col = "gray")
 
-plot(f.shift/1000,fftshift(f.signal.harmonics.db), "l", xlab = "F (kHz)", ylab = "Magnitude (V)", main = "FFT (dB) (harmonics)", col = "blue")
+plot(f.shift/1000,fftshift(f.signal.harmonics.db), "l", xlab = "F (kHz)", ylab = "Magnitude (V)", main = "FFT (dB) (Harmonics)", col = "blue")
 grid(nx = NULL, col = "gray")
 
 plot(t*1000,wave.no.fundamental, "l", xlab = "Time (ms)", ylab = "Magnitude (V)", main = "Signal (No Fundamental)", col = "turquoise")
@@ -108,8 +113,19 @@ grid(nx = NULL, col = "gray")
 plot(t[period]*1000,wave.no.fundamental.trimmed, "l", xlab = "Time (ms)", ylab = "Magnitude (V)", main = "Signal (No Fundamental) (One Period)", col = "red")
 grid(nx = NULL, col = "gray")
 
-plot(t[period]*1000,predict(fit.6), "l", xlab = "Time (ms)", ylab = "Magnitude (V)", main = "6th Order Polynomial Fit", col = "magenta")
+plot(t[period]*1000,fit.6, "l", xlab = "Time (ms)", ylab = "Magnitude (V)", main = "6th Order Polynomial Fit (One Period)", col = "magenta")
 grid(nx = NULL, col = "gray")
+
+plot(t*1000,poly.expand, "l", xlab = "Time (ms)", ylab = "Magnitude (V)", main = "6th Order Polynomial Fit", col = "pink")
+grid(nx = NULL, col = "gray")
+
+plot(f.shift/1000,abs(fftshift(f.poly.expand)), "l", xlab = "F (kHz)", ylab = "Magnitude (V)", main = "FFT (Polynomial)", col = "cornflowerblue")
+grid(nx = NULL, col = "gray")
+
+plot(f.shift/1000,fftshift(f.poly.expand.db), "b", xlab = "F (kHz)", ylab = "Magnitude (V)", main = "FFT (dB) (Polynomial)", col = "darkorchid1")
+grid(nx = NULL, col = "gray")
+
+
 
 dev.off()
 
