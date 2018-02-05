@@ -35,8 +35,8 @@ tovolt <- function(db){
 
 
 # Creating the sine waves
-sample.rate = 65536/16
-npts = 1024/2
+sample.rate = 8192
+npts = 1024
 
 dt = 1/npts
 t <- 0:(npts - 1) * dt
@@ -49,8 +49,11 @@ f.shift[1:floor(npts/2)] <- f.shift[1:floor(npts/2)]-f[npts]-df
 f.shift <- f.shift*2
 
 # Creating the sine waves
-freq <- 1008 # 5 peaks over 250ms
+freq <- 1008 # 8 peaks over 250ms
 omega <- 2 * pi * freq
+
+peaks <- sample.rate / npts
+period <- 1:(npts / peaks)
 
 # Fundamental Frequency
 fundamental <- cos(omega*t)
@@ -73,10 +76,16 @@ f.fundamental <- fft(fundamental) / npts
 f.signal.harmonics <- f.signal - f.fundamental
 f.signal.harmonics.db <- todb(f.signal.harmonics)
 
+wave.no.fundamental <- Re(fft(f.signal.harmonics, inverse = TRUE))
+wave.no.fundamental.trimmed <- wave.no.fundamental[period]
+fit.6 <- lm(wave.no.fundamental.trimmed~poly(period, 6, raw = TRUE))
+
+
+
 # Plots results on a pdf
 pdf("results.pdf", width = 15, height = 10)
 
-par(mfrow = c(2,3))
+par(mfrow = c(3,3))
 
 plot(t*1000,signal, "l", xlab = "Time (ms)", ylab = "Magnitude (V)", main = "Signal", col = "green")
 grid(nx = NULL, col = "gray")
@@ -84,7 +93,7 @@ grid(nx = NULL, col = "gray")
 plot(f.shift/1000,abs(fftshift(f.signal)), "l", xlab = "F (kHz)", ylab = "Magnitude (V)", main = "FFT", col = "yellow")
 grid(nx = NULL, col = "gray")
 
-plot(f.shift/1000,abs(fftshift(f.signal.harmonics)), "l", xlab = "F (kHz)", ylab = "Magnitude (V)", main = "FFT (harmonics)", col = "yellow")
+plot(f.shift/1000,abs(fftshift(f.signal.harmonics)), "l", xlab = "F (kHz)", ylab = "Magnitude (V)", main = "FFT (harmonics)", col = "orange")
 grid(nx = NULL, col = "gray")
 
 plot(f.shift/1000,fftshift(f.signal.db), "l", xlab = "F (kHz)", ylab = "Magnitude (V)", main = "FFT (dB)", col = "purple")
@@ -93,7 +102,13 @@ grid(nx = NULL, col = "gray")
 plot(f.shift/1000,fftshift(f.signal.harmonics.db), "l", xlab = "F (kHz)", ylab = "Magnitude (V)", main = "FFT (dB) (harmonics)", col = "blue")
 grid(nx = NULL, col = "gray")
 
-plot(t*1000,Re(fft(f.signal.harmonics, inverse = TRUE)), "l", xlab = "Time (ms)", ylab = "Magnitude (V)", main = "Signal (No Fundamental)", col = "turquoise")
+plot(t*1000,wave.no.fundamental, "l", xlab = "Time (ms)", ylab = "Magnitude (V)", main = "Signal (No Fundamental)", col = "turquoise")
+grid(nx = NULL, col = "gray")
+
+plot(t[period]*1000,wave.no.fundamental.trimmed, "l", xlab = "Time (ms)", ylab = "Magnitude (V)", main = "Signal (No Fundamental) (One Period)", col = "red")
+grid(nx = NULL, col = "gray")
+
+plot(t[period]*1000,predict(fit.6), "l", xlab = "Time (ms)", ylab = "Magnitude (V)", main = "6th Order Polynomial Fit", col = "magenta")
 grid(nx = NULL, col = "gray")
 
 dev.off()
