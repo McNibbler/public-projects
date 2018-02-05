@@ -53,7 +53,7 @@ freq <- 1008 # 8 peaks over 250ms
 omega <- 2 * pi * freq
 
 peaks <- sample.rate / npts
-period <- 1:(npts / peaks)
+period <- 1:(npts / (peaks) + 1)
 
 # Fundamental Frequency
 fundamental <- cos(omega*t)
@@ -78,7 +78,7 @@ f.signal.harmonics.db <- todb(f.signal.harmonics)
 
 wave.no.fundamental <- Re(fft(f.signal.harmonics, inverse = TRUE))
 wave.no.fundamental.trimmed <- wave.no.fundamental[period]
-fit.6 <- lm(wave.no.fundamental.trimmed~poly(period, 6, raw = TRUE))
+fit.6 <- lm(wave.no.fundamental.trimmed~poly(period, 100, raw = TRUE))
 
 
 
