@@ -1,8 +1,8 @@
 #####################################
 # Polynomial Harmonic Visualization #
-# Version 1.1                       #
+# Version 1.2                       #
 #                                   #
-# February 2, 2018                  #
+# February 5, 2018                  #
 # Thomas Kaunzinger                 #
 # XCerra Corp.                      #
 #####################################
