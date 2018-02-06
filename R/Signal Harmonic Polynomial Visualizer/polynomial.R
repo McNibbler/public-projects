@@ -1,8 +1,8 @@
 #####################################
 # Polynomial Harmonic Visualization #
-# Version 1.2                       #
+# Version 1.3                       #
 #                                   #
-# February 5, 2018                  #
+# February 6, 2018                  #
 # Thomas Kaunzinger                 #
 # XCerra Corp.                      #
 #####################################
@@ -78,7 +78,7 @@ f.signal.harmonics.db <- todb(f.signal.harmonics)
 
 wave.no.fundamental <- Re(fft(f.signal.harmonics, inverse = TRUE))
 wave.no.fundamental.trimmed <- wave.no.fundamental[period]
-fit.6 <- lm(wave.no.fundamental.trimmed~poly(period, 12, raw = TRUE))
+fit.6 <- lm(wave.no.fundamental.trimmed~poly(period, 25, raw = TRUE))
 
 fit.6 <- unname(predict(fit.6, data.frame(x = t)))
 
