@@ -6,6 +6,7 @@
 *.sdf
 *.csv
 *.xlsx
+*.pptx
 
 # Temp Files
 *~
