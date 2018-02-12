@@ -1,6 +1,6 @@
 # R Cache
-*.Rhistory
-*.RData
+.Rhistory
+.RData
 
 # Proprietary data that I shouldn't share publically
 *.sdf
