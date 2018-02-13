@@ -14,6 +14,7 @@
 *.summary
 *.log
 *.lnk
+*.idea
 /R/ATE Data Reader/Data/*
 
 # Temp Files
