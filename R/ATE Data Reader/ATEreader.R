@@ -121,7 +121,6 @@ server <- function(input, output){
       return(NULL)
     }
     
-    
     paste("Your file is: ", my.file()[1])
     
     
@@ -131,7 +130,7 @@ server <- function(input, output){
   # Jesus I don't know what I'm gonna do here but let's roll with it I guess
   data.rtdf <- reactive({
     
-    ConvertStdf(stdf_name = my.file()[1], rtdf_name = "data.rtdf", stdf_dir = data.dir())
+    ConvertStdf(stdf_name = toString(my.file()[1]), rtdf_name = "data.rtdf", stdf_dir = toString(data.dir()))
     
   })
   
