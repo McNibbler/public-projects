@@ -10,6 +10,10 @@
 *.pptx
 *.pdf
 *.std
+*.rtdf
+*.summary
+*.log
+*.lnk
 /R/ATE Data Reader/Data/*
 
 # Temp Files
