@@ -1,4 +1,5 @@
 # R Cache
+.Rprofile
 .Rhistory
 .RData
 
@@ -9,6 +10,10 @@
 *.pptx
 *.pdf
 *.std
+/R/ATE Data Reader/Data/*
 
 # Temp Files
 *~
+
+# Because I don't need to include the entire RADAR library
+/R/ATE Data Reader/RADAR Files/*
