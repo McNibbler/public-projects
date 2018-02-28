@@ -16,6 +16,7 @@
 *.lnk
 *.idea
 /R/ATE Data Reader/Data/*
+/Python/ATE Data Reader/Data/*
 
 # Temp Files
 *~

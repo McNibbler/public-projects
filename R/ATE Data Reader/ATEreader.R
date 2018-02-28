@@ -35,9 +35,9 @@ rm(my.dir)
 
 
 # Testing with this file
-data.dir <- "./Data/"
-data.name <- "super secret test data.std"
-results.name <- "./Data/RDTF/Rtdf Results.rtdf"
+#data.dir <- "./Data/"
+#data.name <- "super secret test data.std"
+#results.name <- "./Data/RDTF/Rtdf Results.rtdf"
 
 #data.rtdf <- ConvertStdf(stdf_name = data.name, rtdf_name = results.name, stdf_dir = data.dir)
 
@@ -56,6 +56,15 @@ ui <- fluidPage(
       
       fileInput("file1", h3("STDF/CSV File"),
                 accept = c(".std", "text/csv", "text/comma-separated-values,text/plain", ".csv")
+      ),
+      
+      conditionalPanel(
+        
+        condition = "input.file1 == hello",
+        
+        h3("nice")
+        
+        #downloadButton("download.data", "Download")
       )
       
     ),
@@ -127,8 +136,14 @@ server <- function(input, output){
   })
   
   
+  
+  
   # Jesus I don't know what I'm gonna do here but let's roll with it I guess
-  data.rtdf <- reactive({
+  output$download.data <- downloadHandler({
+    
+    if (is.null(my.file())){
+      return(NULL)
+    }
     
     ConvertStdf(stdf_name = toString(my.file()[1]), rtdf_name = "data.rtdf", stdf_dir = toString(data.dir()))
     
