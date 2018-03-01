@@ -20,6 +20,7 @@ from pystdf.Writers import *
 
 import sys
 
+
 sys.path.append("/pystdf-master")
 
 try:
@@ -51,15 +52,12 @@ print(filepath)
 
 # lmfao i just took this from the stdf2text script and im trying to change it so it works but there's no documentation
 # im crying inside and out send help
-def process_file(fnames):
-    filename = fnames
+def process_file(filename):
 
     reopen_fn = None
-    if filename is None:
-        f = sys.stdin
 
     # Checks if gzip is installed and opens file with it if possible
-    elif gzPattern.search(filename):
+    if gzPattern.search(filename):
         if not have_gzip:
             print("gzip is not supported on this system", file=sys.stderr)
             sys.exit(1)
@@ -79,15 +77,17 @@ def process_file(fnames):
         f = open(filename, 'rb')
 
     p = Parser(inp=f, reopen_fn=reopen_fn)
-
-    if len(fnames) < 2:
-        p.addSink(TextWriter())
-        p.parse()
-    else:
-        with open(fnames[1], 'w') as fout:
-            p.addSink(TextWriter(stream=fout))
-            p.parse()
+    p.addSink(XmlWriter())
+    p.parse()
     f.close()
+
+    # if len(fnames) < 2:
+    #     p.addSink(TextWriter())
+    #     p.parse()
+    # else:
+    #     with open(fnames, 'w') as fout:
+    #         p.addSink(TextWriter(stream=fout))
+    #         p.parse()
 
 
 ###################################################
