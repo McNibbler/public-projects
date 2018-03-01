@@ -15,11 +15,13 @@
 *.log
 *.lnk
 *.idea
+*.txt
 /R/ATE Data Reader/Data/*
 /Python/ATE Data Reader/Data/*
 
 # Temp Files
 *~
 
-# Because I don't need to include the entire RADAR library
+# Because I don't need to include the entire RADAR/PySTDF libraries
 /R/ATE Data Reader/RADAR Files/*
+/Python/ATE Data Reader/pystdf-master/*
