@@ -1,8 +1,8 @@
 ###################################################
 # ATE Data Reader Python Edition                  #
-# Version 0.1                                     #
+# Version 0.2                                     #
 #                                                 #
-# March 1, 2018                                   #
+# March 2, 2018                                   #
 # Thomas Kaunzinger                               #
 # XCerra Corp.                                    #
 #                                                 #
@@ -14,12 +14,11 @@
 # Importing a bunch of stuff that I probably won't even need but we'll just roll with it for now
 from __future__ import print_function
 
-
 from pystdf.IO import *
 from pystdf.Writers import *
 
+import os
 import sys
-
 
 sys.path.append("/pystdf-master")
 
@@ -36,11 +35,16 @@ try:
 except ImportError:
     have_bz2 = False
 
+import pandas as pd
+import pystdf.V4 as V4
+from pystdf.Importer import STDF2DataFrame
 
 gzPattern = re.compile('\.g?z', re.I)
 bz2Pattern = re.compile('\.bz2', re.I)
 
 ###################################################
+
+# Chose where the STDF file is located. I'll add some pretty-ness to this at some point
 
 wd = os.path.dirname(os.path.abspath(__file__))
 
@@ -51,9 +55,13 @@ print(filepath)
 ###################################################
 
 # lmfao i just took this from the stdf2text script and im trying to change it so it works but there's no documentation
-# im crying inside and out send help
+# im crying inside and out send help. I'll attempt to document it myself, but I'm so sorry for all the garbo.
+
+# Currently, this function takes the stdf file and parses it to a text file with the name of the file, followed by a
+# "_parsed.txt", which can be open and analyzed later. Parsing is delimited with pipes, "|"
 def process_file(filename):
 
+    # Not sure what this actually does but it was in the script so lets roll with it
     reopen_fn = None
 
     # Checks if gzip is installed and opens file with it if possible
@@ -72,25 +80,57 @@ def process_file(filename):
         reopen_fn = lambda: bz2.BZ2File(filename, 'rb')
         f = reopen_fn()
 
-    # Opens otherwise
+    # Opens it the boring way otherwise (i don't actually know what makes this different, probably speed idk)
     else:
         f = open(filename, 'rb')
 
+    # The name of the new file, preserving the directory of the previous
+    newFile = filename + "_parsed.txt"
+
+    # I guess I'm making a parsing object here, but again I didn't write this part
     p = Parser(inp=f, reopen_fn=reopen_fn)
-    p.addSink(XmlWriter())
-    p.parse()
+
+    # Writing to a text file instead of vomiting it to the console
+    with open(newFile, 'w') as fout:
+        p.addSink(TextWriter(stream=fout))
+        p.parse()
+
+    # We don't need to keep that file open
     f.close()
 
-    # if len(fnames) < 2:
-    #     p.addSink(TextWriter())
-    #     p.parse()
-    # else:
-    #     with open(fnames, 'w') as fout:
-    #         p.addSink(TextWriter(stream=fout))
-    #         p.parse()
 
+# Similar to the previous function, takes an STDF file and creates an xlsx document with "_excel.xlsx" added to the file
+# name. This function is hella slow, so I recommend not using it if you don't need to, but we'll see if I actually end
+# up using it in this script or not.
+def toExcel(filename):
+
+    # Converts the stdf to a data frame... somehow (i do not ever intend on looking how he managed to parse this gross
+    # file format)
+    tables = STDF2DataFrame(filename)
+
+    # The name of the new file, preserving the directory of the previous
+    fname = filename + "_excel.xlsx"
+
+    # Writing object to work with excel documents
+    writer = pd.ExcelWriter(fname,engine='xlsxwriter')
+
+    # Not mine and I don't really know what's going on here, but it works, so I won't question him. It actually writes
+    # the data frame as an excel document
+    for k,v in tables.items():
+        # Make sure the order of columns complies the specs
+        record = [r for r in V4.records if r.__class__.__name__.upper()==k]
+        if len(record)==0:
+            print("Ignore exporting table %s: No such record type exists." %k)
+        else:
+            columns = [field[0] for field in record[0].fieldMap]
+            v.to_excel(writer,sheet_name=k,columns=columns,index=False,na_rep="N/A")
+    writer.save()
 
 ###################################################
 
-
 process_file(filepath)
+
+# This one is way too slow. Use with caution.
+# toExcel(filepath)
+
+
