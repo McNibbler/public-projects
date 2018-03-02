@@ -1,5 +1,5 @@
 ###################################################
-# ATE Data Reader Python Edition                  #
+# ATE STDF Data Reader Python Edition             #
 # Version 0.2                                     #
 #                                                 #
 # March 2, 2018                                   #
@@ -18,6 +18,11 @@
 # binary data and is the most commonly used format of data produced by Automatic Test Equipment (ATE), used by
 # companies like LTX-Credence and Teradyne. This program will be using the obscure but very helpful PySTDF library
 # to parse and subsequently process the data into sensible, meaningful results.
+
+# This project can be found here: https://github.com/McNibbler/public-projects/tree/master/Python/ATE%20Data%20Reader
+#   Note: repository contains more projects than just ATE Reader
+
+# The PySTDF library project can be found here: https://github.com/cmars/pystdf
 
 ###################################################
 
@@ -39,13 +44,12 @@ sys.path.append("/pystdf-master")
 
 try:
     import gzip
-
     have_gzip = True
 except ImportError:
     have_gzip = False
+
 try:
     import bz2
-
     have_bz2 = True
 except ImportError:
     have_bz2 = False
@@ -70,9 +74,10 @@ import matplotlib.pyplot as plt
 
 wd = os.path.dirname(os.path.abspath(__file__))
 
-filepath = os.path.join(wd,"Data\\data.std")
+filepath = os.path.join(wd, "Data\\data.std")
 
 print(filepath)
+
 
 ###################################################
 
@@ -83,7 +88,7 @@ print(filepath)
 # Defining the main method
 def main():
     # Parses that big boi into a text file
-    process_file(filepath)
+    # process_file(filepath)
 
     # This one is way too slow. Use with caution.
     # toExcel(filepath)
@@ -96,7 +101,7 @@ def main():
     print(data[0:10])
     print(len(data))
 
-    # Separates the different types of data from the text file into their own sets
+    # Separates the different types of data from the text file into their own sets. Here, I am initializing the arrays.
     far_data = []
     mir_data = []
     sdr_data = []
@@ -112,7 +117,7 @@ def main():
     mrr_data = []
 
     # Appends each set of data to their own personal arrays
-    for i in range(0,len(data) - 1):
+    for i in range(0, len(data) - 1):
         if data[i].startswith("FAR"):
             far_data.append(data[i])
         elif data[i].startswith("MIR"):
@@ -142,19 +147,48 @@ def main():
 
     # Just to check that it worked. I'll get rid of this later
     print(far_data[0:5])
+    print(len(far_data))
     print(mir_data[0:5])
+    print(len(mir_data))
     print(sdr_data[0:5])
+    print(len(sdr_data))
     print(pmr_data[0:5])
+    print(len(pmr_data))
     print(pgr_data[0:5])
+    print(len(pgr_data))
     print(pir_data[0:5])
+    print(len(pir_data))
     print(ptr_data[0:5])
+    print(len(ptr_data))
     print(prr_data[0:5])
+    print(len(prr_data))
     print(tsr_data[0:5])
+    print(len(tsr_data))
     print(hbr_data[0:5])
+    print(len(hbr_data))
     print(sbr_data[0:5])
+    print(len(sbr_data))
     print(pcr_data[0:5])
+    print(len(pcr_data))
     print(mrr_data[0:5])
+    print(len(mrr_data))
 
+    # finds the number of lines per test, one line for each site being tested
+    sdr_parse = sdr_data[0].split("|")
+    number_of_sites = sdr_parse[3]
+    print(number_of_sites)
+
+    # This is legit gonna be like an array of data frames yikes
+    ptr_data_frames = []
+
+    for i in range (0, (len(ptr_data) / number_of_sites) - 1):
+        test_number = ptr_data[i].split("|")[1]
+
+        # I'll figure this one out soon enough omg this is so fugly
+        # ptr_data_frames.append(pd.DataFrame(str(test_number):[]))
+
+
+    # ignore this for now
 
     # # Lemme make sure I can get something to actually show up
     # plt.figure(1)
@@ -168,6 +202,7 @@ def main():
     #
     # plt.show()
 
+
 ###################################################
 
 #######################
@@ -180,7 +215,6 @@ def main():
 # Currently, this function takes the stdf file and parses it to a text file with the name of the file, followed by a
 # "_parsed.txt", which can be open and analyzed later. Parsing is delimited with pipes, "|"
 def process_file(filename):
-
     # Not sure what this actually does but it was in the script so lets roll with it
     reopen_fn = None
 
@@ -223,7 +257,6 @@ def process_file(filename):
 # name. This function is hella slow, so I recommend not using it if you don't need to, but we'll see if I actually end
 # up using it in this script or not.
 def toExcel(filename):
-
     # Converts the stdf to a data frame... somehow (i do not ever intend on looking how he managed to parse this gross
     # file format)
     tables = STDF2DataFrame(filename)
@@ -232,22 +265,28 @@ def toExcel(filename):
     fname = filename + "_excel.xlsx"
 
     # Writing object to work with excel documents
-    writer = pd.ExcelWriter(fname,engine='xlsxwriter')
+    writer = pd.ExcelWriter(fname, engine='xlsxwriter')
 
     # Not mine and I don't really know what's going on here, but it works, so I won't question him. It actually writes
     # the data frame as an excel document
-    for k,v in tables.items():
+    for k, v in tables.items():
         # Make sure the order of columns complies the specs
-        record = [r for r in V4.records if r.__class__.__name__.upper()==k]
-        if len(record)==0:
-            print("Ignore exporting table %s: No such record type exists." %k)
+        record = [r for r in V4.records if r.__class__.__name__.upper() == k]
+        if len(record) == 0:
+            print("Ignore exporting table %s: No such record type exists." % k)
         else:
             columns = [field[0] for field in record[0].fieldMap]
-            v.to_excel(writer,sheet_name=k,columns=columns,index=False,na_rep="N/A")
+            v.to_excel(writer, sheet_name=k, columns=columns, index=False, na_rep="N/A")
     writer.save()
+
 
 ###################################################
 
+#############
+# EXECUTION #
+#############
+
 # Execute main method. Weow!!!
+# If you made it this far, sorry for my passive-aggressive commenting and thanks for sticking through it all.
 if __name__ == "__main__":
     main()
