@@ -80,18 +80,80 @@ print(filepath)
 # MAIN METHOD #
 ###############
 
+# Defining the main method
 def main():
     # Parses that big boi into a text file
     process_file(filepath)
+
     # This one is way too slow. Use with caution.
     # toExcel(filepath)
 
+    # Finds and opens the recently created parsed text file
     parsedDataFile = filepath + "_parsed.txt"
-
     data = open(parsedDataFile).readlines()
 
-    print(data)
+    # Checks that it's actually correct
+    print(data[0:10])
     print(len(data))
+
+    # Separates the different types of data from the text file into their own sets
+    far_data = []
+    mir_data = []
+    sdr_data = []
+    pmr_data = []
+    pgr_data = []
+    pir_data = []
+    ptr_data = []
+    prr_data = []
+    tsr_data = []
+    hbr_data = []
+    sbr_data = []
+    pcr_data = []
+    mrr_data = []
+
+    # Appends each set of data to their own personal arrays
+    for i in range(0,len(data) - 1):
+        if data[i].startswith("FAR"):
+            far_data.append(data[i])
+        elif data[i].startswith("MIR"):
+            mir_data.append(data[i])
+        elif data[i].startswith("SDR"):
+            sdr_data.append(data[i])
+        elif data[i].startswith("PMR"):
+            pmr_data.append(data[i])
+        elif data[i].startswith("PGR"):
+            pgr_data.append(data[i])
+        elif data[i].startswith("PIR"):
+            pir_data.append(data[i])
+        elif data[i].startswith("PTR"):
+            ptr_data.append(data[i])
+        elif data[i].startswith("PRR"):
+            prr_data.append(data[i])
+        elif data[i].startswith("TSR"):
+            tsr_data.append(data[i])
+        elif data[i].startswith("HBR"):
+            hbr_data.append(data[i])
+        elif data[i].startswith("SBR"):
+            sbr_data.append(data[i])
+        elif data[i].startswith("PCR"):
+            pcr_data.append(data[i])
+        elif data[i].startswith("MRR"):
+            mrr_data.append(data[i])
+
+    # Just to check that it worked. I'll get rid of this later
+    print(far_data[0:5])
+    print(mir_data[0:5])
+    print(sdr_data[0:5])
+    print(pmr_data[0:5])
+    print(pgr_data[0:5])
+    print(pir_data[0:5])
+    print(ptr_data[0:5])
+    print(prr_data[0:5])
+    print(tsr_data[0:5])
+    print(hbr_data[0:5])
+    print(sbr_data[0:5])
+    print(pcr_data[0:5])
+    print(mrr_data[0:5])
 
 
     # # Lemme make sure I can get something to actually show up
