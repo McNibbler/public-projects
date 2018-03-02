@@ -4,14 +4,29 @@
 #                                                 #
 # March 2, 2018                                   #
 # Thomas Kaunzinger                               #
-# XCerra Corp.                                    #
+# LTX-Credence / XCerra Corp.                     #
 #                                                 #
 # References:                                     #
 # PySTDF Library                                  #
+# numpy                                           #
+# matplotlib                                      #
 # My crying soul because there's no documentation #
 ###################################################
 
-# Importing a bunch of stuff that I probably won't even need but we'll just roll with it for now
+# The purpose of this program is to attempt to make sense of Teradyne's somewhat-standard fie format: the
+# Standard Test Data Format (STDF). This proprietary file format consists of non-trivially parsed and encoded
+# binary data and is the most commonly used format of data produced by Automatic Test Equipment (ATE), used by
+# companies like LTX-Credence and Teradyne. This program will be using the obscure but very helpful PySTDF library
+# to parse and subsequently process the data into sensible, meaningful results.
+
+###################################################
+
+#######################
+# IMPORTING LIBRARIES #
+#######################
+
+# Importing a bunch of stuff that I probably won't even need but we'll just roll with it for now. I actually don't even
+# know what libraries here I actually am using at the moment so that's fun.
 from __future__ import print_function
 
 from pystdf.IO import *
@@ -42,7 +57,14 @@ from pystdf.Importer import STDF2DataFrame
 gzPattern = re.compile('\.g?z', re.I)
 bz2Pattern = re.compile('\.bz2', re.I)
 
+import numpy as np
+import matplotlib.pyplot as plt
+
 ###################################################
+
+##################
+# FILE SELECTION #
+##################
 
 # Chose where the STDF file is located. I'll add some pretty-ness to this at some point
 
@@ -53,6 +75,42 @@ filepath = os.path.join(wd,"Data\\data.std")
 print(filepath)
 
 ###################################################
+
+###############
+# MAIN METHOD #
+###############
+
+def main():
+    # Parses that big boi into a text file
+    process_file(filepath)
+    # This one is way too slow. Use with caution.
+    # toExcel(filepath)
+
+    parsedDataFile = filepath + "_parsed.txt"
+
+    data = open(parsedDataFile).readlines()
+
+    print(data)
+    print(len(data))
+
+
+    # # Lemme make sure I can get something to actually show up
+    # plt.figure(1)
+    #
+    # # Raw Wave
+    # plt.subplot(221)
+    # plt.plot(tMili, data, color = "green")
+    # plt.xlabel("Time (ms)")
+    # plt.ylabel("Magnitude (V)")
+    # plt.title("ADC Data (Raw)")
+    #
+    # plt.show()
+
+###################################################
+
+#######################
+# IMPORTANT FUNCTIONS #
+#######################
 
 # lmfao i just took this from the stdf2text script and im trying to change it so it works but there's no documentation
 # im crying inside and out send help. I'll attempt to document it myself, but I'm so sorry for all the garbo.
@@ -128,9 +186,6 @@ def toExcel(filename):
 
 ###################################################
 
-process_file(filepath)
-
-# This one is way too slow. Use with caution.
-# toExcel(filepath)
-
-
+# Execute main method. Weow!!!
+if __name__ == "__main__":
+    main()
