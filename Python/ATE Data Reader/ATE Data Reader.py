@@ -13,16 +13,25 @@
 # My crying soul because there's no documentation #
 ###################################################
 
-# The purpose of this program is to attempt to make sense of Teradyne's somewhat-standard fie format: the
-# Standard Test Data Format (STDF). This proprietary file format consists of non-trivially parsed and encoded
-# binary data and is the most commonly used format of data produced by Automatic Test Equipment (ATE), used by
-# companies like LTX-Credence and Teradyne. This program will be using the obscure but very helpful PySTDF library
-# to parse and subsequently process the data into sensible, meaningful results.
+#######################################################################################################################
+# The purpose of this program is to attempt to make sense of Teradyne's somewhat-standard fie format: the             #
+# Standard Test Data Format (STDF). This proprietary file format consists of non-trivially parsed and encoded         #
+# binary data and is the most commonly used format of data produced by Automatic Test Equipment (ATE), used by        #
+# companies like LTX-Credence and Teradyne. This program will be using the obscure but very helpful PySTDF library    #
+# to parse and subsequently process the data into sensible, meaningful results.                                       #
+#                                                                                                                     #
+# This project can be found here: https://github.com/McNibbler/public-projects/tree/master/Python/ATE%20Data%20Reader #
+#   Note: repository contains more projects than just ATE Reader. Please check them out if you're interested :)       #
+#                                                                                                                     #
+# The PySTDF library project can be found here: https://github.com/cmars/pystdf                                       #
+#######################################################################################################################
 
-# This project can be found here: https://github.com/McNibbler/public-projects/tree/master/Python/ATE%20Data%20Reader
-#   Note: repository contains more projects than just ATE Reader
-
-# The PySTDF library project can be found here: https://github.com/cmars/pystdf
+#######################################################################################################################
+# NOTE: Do not run this program on data with the a file of the same name, but with "_parsed.txt" or "_excel.xlsx"     #
+# appended to the end; e.g. running this on "data.std" with a file called "data.std_parsed.txt" in the same folder is #
+# a bad idea, as it will be overwritten, due to the fact that this program creates and writes to a text file of that  #
+# naming convention. But for real, why would you even do that in the first place?                                     #
+#######################################################################################################################
 
 ###################################################
 
