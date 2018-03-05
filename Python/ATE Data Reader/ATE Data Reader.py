@@ -104,7 +104,7 @@ def main():
 
     # Finds and opens the recently created parsed text file
     parsedDataFile = filepath + "_parsed.txt"
-    data = open(parsedDataFile).readlines()
+    data = open(parsedDataFile).read().splitlines()
 
     # Checks that it's actually correct
     print(data[0:10])
@@ -154,50 +154,42 @@ def main():
         elif data[i].startswith("MRR"):
             mrr_data.append(data[i])
 
-    # Just to check that it worked. I'll get rid of this later
-    print(far_data[0:5])
-    print(len(far_data))
-    print(mir_data[0:5])
-    print(len(mir_data))
-    print(sdr_data[0:5])
-    print(len(sdr_data))
-    print(pmr_data[0:5])
-    print(len(pmr_data))
-    print(pgr_data[0:5])
-    print(len(pgr_data))
-    print(pir_data[0:5])
-    print(len(pir_data))
-    print(ptr_data[0:5])
-    print(len(ptr_data))
-    print(prr_data[0:5])
-    print(len(prr_data))
-    print(tsr_data[0:5])
-    print(len(tsr_data))
-    print(hbr_data[0:5])
-    print(len(hbr_data))
-    print(sbr_data[0:5])
-    print(len(sbr_data))
-    print(pcr_data[0:5])
-    print(len(pcr_data))
-    print(mrr_data[0:5])
-    print(len(mrr_data))
 
     # finds the number of lines per test, one line for each site being tested
     sdr_parse = sdr_data[0].split("|")
-    number_of_sites = sdr_parse[3]
+    number_of_sites = int(sdr_parse[3])
     print(number_of_sites)
 
-    # This is legit gonna be like an array of data frames yikes
-    ptr_data_frames = []
 
-    for i in range (0, (len(ptr_data) / number_of_sites) - 1):
-        test_number = ptr_data[i].split("|")[1]
-
-        # I'll figure this one out soon enough omg this is so fugly
-        # ptr_data_frames.append(pd.DataFrame(str(test_number):[]))
+    # Finds the first testing number for the first set of data
+    first_test = ptr_data[0].split("|")[1]
 
 
-    # ignore this for now
+    # Gathers a list of the test numbers
+    list_of_test_numbers = [first_test]
+    for i in range(0, len(ptr_data), number_of_sites):
+        list_of_test_numbers = np.vstack([list_of_test_numbers, ptr_data[i].split("|")[1]])
+
+
+    # Extracts the PTR data from a given test number and stores it into an array
+    selected_ptr_test = ptr_extractor(number_of_sites, ptr_data, first_test)
+
+    # Test prints
+    print(selected_ptr_test)
+    print(len(selected_ptr_test))
+
+    print(list_of_test_numbers)
+    print(len(list_of_test_numbers))
+
+
+    # all_ptr_tests = ptr_extractor(number_of_sites, ptr_data, first_test)
+
+
+
+
+    ##########
+    # IGNORE #
+    ##########
 
     # # Lemme make sure I can get something to actually show up
     # plt.figure(1)
@@ -217,6 +209,31 @@ def main():
 #######################
 # IMPORTANT FUNCTIONS #
 #######################
+
+# Integer, Parsed List of Strings (PTR specifically), String -> Array
+# It grabs the data for a certain test in the PTR data and turns that specific test into an array of arrays
+def ptr_extractor(num_of_sites, data, test_number):
+
+    # Initializes an array of the data from one of the tests for all test sites
+    ptr_array_test = np.zeros(len(data[1].split("|")))
+
+    # Finds where in the data to start looking for the test in question
+    starting_index = 0
+    for i in range(0, len(data), num_of_sites):
+        if data[i].split("|")[1] == test_number:
+            starting_index = i
+
+    # Appends each row of the test's data to cover the entire test and nothing more
+    for j in range (starting_index, (starting_index + num_of_sites)):
+        ptr_array_test = np.vstack([ptr_array_test,data[j].split("|")])
+
+    # Maybe I just suck at initializing arrays in numpy but I couldn't be bothered to do it without just creating an
+    # array full of zeros first and then just removing it later.
+    ptr_array_test = np.delete(ptr_array_test, 0, 0)
+
+    # Returns the array weow!
+    return ptr_array_test
+
 
 # lmfao i just took this from the stdf2text script and im trying to change it so it works but there's no documentation
 # im crying inside and out send help. I'll attempt to document it myself, but I'm so sorry for all the garbo.
