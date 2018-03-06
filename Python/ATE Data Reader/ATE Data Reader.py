@@ -13,25 +13,38 @@
 # My crying soul because there's no documentation #
 ###################################################
 
-#######################################################################################################################
-# The purpose of this program is to attempt to make sense of Teradyne's somewhat-standard fie format: the             #
-# Standard Test Data Format (STDF). This proprietary file format consists of non-trivially parsed and encoded         #
-# binary data and is the most commonly used format of data produced by Automatic Test Equipment (ATE), used by        #
-# companies like LTX-Credence and Teradyne. This program will be using the obscure but very helpful PySTDF library    #
-# to parse and subsequently process the data into sensible, meaningful results.                                       #
-#                                                                                                                     #
-# This project can be found here: https://github.com/McNibbler/public-projects/tree/master/Python/ATE%20Data%20Reader #
-#   Note: repository contains more projects than just ATE Reader. Please check them out if you're interested :)       #
-#                                                                                                                     #
-# The PySTDF library project can be found here: https://github.com/cmars/pystdf                                       #
-#######################################################################################################################
+########################################################################################################################
+# The purpose of this program is to attempt to make sense of Teradyne's somewhat-standard fie format: the              #
+# Standard Test Data Format (STDF). This proprietary file format consists of non-trivially parsed and encoded          #
+# binary data and is the most commonly used format of data produced by Automatic Test Equipment (ATE), used by         #
+# companies like LTX-Credence and Teradyne. This program will be using the obscure but very helpful PySTDF library     #
+# to parse and subsequently process the data into sensible, meaningful results.                                        #
+#                                                                                                                      #
+# This project can be found here: https://github.com/McNibbler/public-projects/tree/master/Python/ATE%20Data%20Reader  #
+#   Note: repository contains more projects than just ATE Reader. Please check them out if you're interested :)        #
+#                                                                                                                      #
+# The PySTDF library project can be found here: https://github.com/cmars/pystdf                                        #
+########################################################################################################################
 
-#######################################################################################################################
-# NOTE: Do not run this program on data with the a file of the same name, but with "_parsed.txt" or "_excel.xlsx"     #
-# appended to the end; e.g. running this on "data.std" with a file called "data.std_parsed.txt" in the same folder is #
-# a bad idea, as it will be overwritten, due to the fact that this program creates and writes to a text file of that  #
-# naming convention. But for real, why would you even do that in the first place?                                     #
-#######################################################################################################################
+########################################################################################################################
+# I also want to apologize in advance for things like when I was making numpy arrays and I did something like:         #
+#                                                                                                                      #
+# np.zeros(...)                                                                                                        #
+# SOME CODE TO DO SOMETHING TO THE ARRAY                                                                               #
+# np.delete(... , 0, 0)                                                                                                #
+#                                                                                                                      #
+# I get this is really stupid, but frankly I haven't used python (or numpy at all) for anything like this in years and #
+# I really can't be bothered to figure out the "proper" way to initialize and append to numpy arrays so this is my     #
+# lazy solution and it works well enough for now so I don't really care if it looks stupid. Maybe I'll fix it later.   #
+# Have mercy on me please :)                                                                                           #
+########################################################################################################################
+
+########################################################################################################################
+# NOTE: Do not run this program on data with the a file of the same name, but with "_parsed.txt" or "_excel.xlsx"      #
+# appended to the end; e.g. running this on "data.std" with a file called "data.std_parsed.txt" in the same folder is  #
+# a bad idea, as it will be overwritten, due to the fact that this program creates and writes to a text file of that   #
+# naming convention. But for real, why would you even do that in the first place?                                      #
+########################################################################################################################
 
 ###################################################
 
@@ -161,30 +174,34 @@ def main():
     print(number_of_sites)
 
     # Finds the first testing number for the first set of data
-    first_test = ptr_data[0].split("|")[1]
+    first_test = [ptr_data[0].split("|")[1], ptr_data[0].split("|")[7]]
 
-    # Gathers a list of the test numbers, avoiding the absurd number of repeats
+    # Gathers a list of the test numbers and the tests ran for each site, avoiding repeats from rerun tests
     list_of_test_numbers = [first_test]
     for i in range(0, len(ptr_data), number_of_sites):
-        if ptr_data[i].split("|")[1] in list_of_test_numbers:
+        if (ptr_data[i].split("|")[1] in list_of_test_numbers) and (ptr_data[i].split("|")[7] in list_of_test_numbers):
             list_of_test_numbers = list_of_test_numbers
         else:
-            list_of_test_numbers = np.append(list_of_test_numbers, ptr_data[i].split("|")[1])
+            list_of_test_numbers = np.vstack([list_of_test_numbers, [ptr_data[i].split("|")[1], ptr_data[i].split("|")[7]]])
 
-    # Extracts the PTR data from a given test number and stores it into an array
-    selected_ptr_test = ptr_extractor(number_of_sites, ptr_data, '440200004')
+    list_of_test_numbers = np.delete(list_of_test_numbers, 0, 0)
 
-    # Test prints to be removed later
+
+    # Extracts the PTR data from a given test number + test name and stores it into an array
+    selected_ptr_test = ptr_extractor(number_of_sites, ptr_data, first_test)
+
+    # # Test prints to debug. To be removed later
     print(selected_ptr_test)
     print(len(selected_ptr_test))
-    #print(list_of_test_numbers)
-    #print(len(list_of_test_numbers))
+    # print(list_of_test_numbers)
+    # print(len(list_of_test_numbers))
+
 
     for i in range(0, len(selected_ptr_test), 36):
         print(selected_ptr_test[i, 5])
 
-    #one_test = single_test_data(number_of_sites, selected_ptr_test)
-    #print(one_test)
+    one_test = single_test_data(number_of_sites, selected_ptr_test)
+    print(one_test)
 
 
 
@@ -215,36 +232,39 @@ def main():
 #######################
 
 # Creates an array of arrays that has the raw data for each test site in one particular test number
+
+# DOCUMENT THIS AFTER YOUR LUNCH BREAK GOD DAMN IT
 def single_test_data(num_of_sites, extracted_ptr):
 
-    single_site = []
+    single_test = [np.zeros(int(len(extracted_ptr) / num_of_sites))]
 
-    for j in range(0, len(extracted_ptr), num_of_sites):
+    for i in range(0, num_of_sites):
 
-        single_site = np.append(single_site, extracted_ptr[i, 5])
+        single_site = []
 
-    return single_site
+        for j in range(i, len(extracted_ptr), num_of_sites):
+
+            single_site = np.append(single_site, float(extracted_ptr[0, 5]))
+
+        single_test = np.vstack([single_test, single_site])
+
+    single_test = np.delete(single_test, 0, 0)
+
+    return single_test
 
 
 
-
-
-
-
-
-
-
-# Integer, Parsed List of Strings (PTR specifically), String -> Array
+# Integer, Parsed List of Strings (PTR specifically), tuple -> Array
 # It grabs the data for a certain test in the PTR data and turns that specific test into an array of arrays
 def ptr_extractor(num_of_sites, data, test_number):
 
     # Initializes an array of the data from one of the tests for all test sites
-    ptr_array_test = np.zeros(len(data[1].split("|")))
+    ptr_array_test = np.zeros(len(data[0].split("|")))
 
     # Finds where in the data to start looking for the test in question
     starting_index = 0
     for i in range(0, len(data), num_of_sites):
-        if data[i].split("|")[1] == test_number:
+        if (data[i].split("|")[1] == test_number[0]) and (data[i].split("|")[7] == test_number[1]):
             starting_index = i
             for j in range(starting_index, (starting_index + num_of_sites)):
                 ptr_array_test = np.vstack([ptr_array_test, data[j].split("|")])
