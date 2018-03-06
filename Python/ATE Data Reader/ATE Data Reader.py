@@ -21,13 +21,13 @@
 # to parse and subsequently process the data into sensible, meaningful results.                                        #
 #                                                                                                                      #
 # This project can be found here: https://github.com/McNibbler/public-projects/tree/master/Python/ATE%20Data%20Reader  #
-#   Note: repository contains more projects than just ATE Reader. Please check them out if you're interested :)        #
+#   Note: repository contains more projects than just the ATE Reader. Please check them out if you're interested :)    #
 #                                                                                                                      #
 # The PySTDF library project can be found here: https://github.com/cmars/pystdf                                        #
 ########################################################################################################################
 
 ########################################################################################################################
-# I also want to apologize in advance for things like when I was making numpy arrays and I did something like:         #
+# I also want to apologize in advance for some stupid code; e.g when I was creating arrays and I did something like:   #
 #                                                                                                                      #
 # np.zeros(...)                                                                                                        #
 # SOME CODE TO DO SOMETHING TO THE ARRAY                                                                               #
@@ -36,7 +36,9 @@
 # I get this is really stupid, but frankly I haven't used python (or numpy at all) for anything like this in years and #
 # I really can't be bothered to figure out the "proper" way to initialize and append to numpy arrays so this is my     #
 # lazy solution and it works well enough for now so I don't really care if it looks stupid. Maybe I'll fix it later.   #
-# Have mercy on me please :)                                                                                           #
+# It does not help that, going into this project, I had absolutely 0 experience with this file format and did not even #
+# know what the end results were actually supposed to look like. Given that knowledge, please don't beat me up too     #
+# badly for my messy and disorganized code. Thank you again and have mercy on me please :)                             #
 ########################################################################################################################
 
 ########################################################################################################################
@@ -173,56 +175,55 @@ def main():
     number_of_sites = int(sdr_parse[3])
     print(number_of_sites)
 
-    # Finds the first testing number for the first set of data
+    # Selects a test number + name combination for a given index
+    test_index = 152
+    selected_test = [ptr_data[number_of_sites*test_index].split("|")[1], ptr_data[number_of_sites*test_index].split("|")[7]]
+
     first_test = [ptr_data[0].split("|")[1], ptr_data[0].split("|")[7]]
 
     # Gathers a list of the test numbers and the tests ran for each site, avoiding repeats from rerun tests
+    # Not used at the moment but who knows?
     list_of_test_numbers = [first_test]
     for i in range(0, len(ptr_data), number_of_sites):
         if (ptr_data[i].split("|")[1] in list_of_test_numbers) and (ptr_data[i].split("|")[7] in list_of_test_numbers):
             list_of_test_numbers = list_of_test_numbers
         else:
             list_of_test_numbers = np.vstack([list_of_test_numbers, [ptr_data[i].split("|")[1], ptr_data[i].split("|")[7]]])
-
     list_of_test_numbers = np.delete(list_of_test_numbers, 0, 0)
 
 
     # Extracts the PTR data from a given test number + test name and stores it into an array
-    selected_ptr_test = ptr_extractor(number_of_sites, ptr_data, first_test)
+    selected_ptr_test = ptr_extractor(number_of_sites, ptr_data, selected_test)
 
     # # Test prints to debug. To be removed later
-    print(selected_ptr_test)
-    print(len(selected_ptr_test))
+    # print(selected_ptr_test)
+    # print(len(selected_ptr_test))
     # print(list_of_test_numbers)
     # print(len(list_of_test_numbers))
 
 
-    for i in range(0, len(selected_ptr_test), 36):
+    for i in range(0, len(selected_ptr_test), number_of_sites):
         print(selected_ptr_test[i, 5])
 
     one_test = single_test_data(number_of_sites, selected_ptr_test)
     print(one_test)
 
 
+    # I'm so shook it's doing something I actually want it to do
+    # Still needs a lot of love tho because this file is disorganized like all hell
+    plt.figure(1)
 
-    # all_ptr_tests = ptr_extractor(number_of_sites, ptr_data, first_test)
+    lower_limit = get_plot_min(ptr_data, selected_test, number_of_sites)
+    upper_limit = get_plot_max(ptr_data, selected_test, number_of_sites)
 
+    plot_full_test_trend(one_test, lower_limit, upper_limit)
 
-    ##########
-    # IGNORE #
-    ##########
+    plt.xlabel("Test Number")
+    plt.ylabel("Results")
+    plt.title("Data Trendline")
+    plt.grid(color='0.9', linestyle='--', linewidth=1)
 
-    # # Lemme make sure I can get something to actually show up
-    # plt.figure(1)
-    #
-    # # Raw Wave
-    # plt.subplot(221)
-    # plt.plot(tMili, data, color = "green")
-    # plt.xlabel("Time (ms)")
-    # plt.ylabel("Magnitude (V)")
-    # plt.title("ADC Data (Raw)")
-    #
-    # plt.show()
+    plt.show()
 
 
 ###################################################
@@ -231,23 +232,75 @@ def main():
 # IMPORTANT FUNCTIONS #
 #######################
 
-# Creates an array of arrays that has the raw data for each test site in one particular test number
+# Returns the lower allowed limit of a set of data
+def get_plot_min(data, desired_test, num_of_sites):
+    return get_plot_extremes(data, desired_test, num_of_sites)[0]
 
-# DOCUMENT THIS AFTER YOUR LUNCH BREAK GOD DAMN IT
+# Returns the upper allowed limit of a set of data
+def get_plot_max(data, desired_test, num_of_sites):
+    return get_plot_extremes(data, desired_test, num_of_sites)[1]
+
+# Abstraction of above 2 functions, returns tuple with min and max
+def get_plot_extremes(data, desired_test, num_of_sites):
+    minimum_test = 0
+    maximum_test = 1
+    temp = 0
+    not_found = True
+    while not_found:
+        if (data[temp].split("|")[1] == desired_test[0]):
+            minimum_test = float(data[temp].split("|")[13])
+            maximum_test = float(data[temp].split("|")[14])
+            not_found = False
+        temp = temp + num_of_sites
+    return [minimum_test, maximum_test]
+
+
+# Plots the results of all sites from one test
+def plot_full_test_trend(test_data, minimum, maximum):
+
+    # Plots each site one at a time
+    for i in range(0, len(test_data)):
+        plot_single_site_trend(test_data[i], minimum, maximum)
+
+    # Plots the minimum and maximum barriers
+    plt.plot(range(0, len(test_data[0])), [minimum] * len(test_data[0]), color="red", linewidth=3.0)
+    plt.plot(range(0, len(test_data[0])), [maximum] * len(test_data[0]), color="red", linewidth=3.0)
+
+    # My feeble attempt to get pretty dynamic limits
+    expand = max([abs(minimum), abs(maximum)])
+    plt.ylim(ymin= minimum - abs(0.05 * expand))
+    plt.ylim(ymax= maximum + abs(0.05 * expand))
+
+
+
+# Plots a single site's results
+def plot_single_site_trend(site_data, min, max):
+    plt.plot(range(0,len(site_data)), site_data)
+
+
+# Creates an array of arrays that has the raw data for each test site in one particular test
+# Given the integer number of sites under test and the Array result from ptr_extractor for a certain test num + name,
+#   expect a 2D array with each row being the reran test results for each of the sites in a particular test
 def single_test_data(num_of_sites, extracted_ptr):
 
+    # Me being bad at initializing arrays again, hush
     single_test = [np.zeros(int(len(extracted_ptr) / num_of_sites))]
 
+    # Runs through once for each of the sites in the test, incrementing by 1
     for i in range(0, num_of_sites):
 
         single_site = []
 
+        # Runs through once for each of the loops of the test, incrementing by the number of test sites until all test
+        # loops are covered for the individual testing site. The incremented i offsets it so that it moves on to the
+        # next testing site
         for j in range(i, len(extracted_ptr), num_of_sites):
 
-            single_site = np.append(single_site, float(extracted_ptr[0, 5]))
+            single_site = np.append(single_site, float(extracted_ptr[j, 5]))
 
         single_test = np.vstack([single_test, single_site])
 
+    # Deletes that initialized row because I suck and don't know how numpy works
     single_test = np.delete(single_test, 0, 0)
 
     return single_test
