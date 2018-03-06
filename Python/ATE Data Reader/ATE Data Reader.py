@@ -1,8 +1,8 @@
 ###################################################
 # ATE STDF Data Reader Python Edition             #
-# Version 0.2                                     #
+# Version 0.3                                     #
 #                                                 #
-# March 2, 2018                                   #
+# March 6, 2018                                   #
 # Thomas Kaunzinger                               #
 # LTX-Credence / XCerra Corp.                     #
 #                                                 #
@@ -160,31 +160,35 @@ def main():
     number_of_sites = int(sdr_parse[3])
     print(number_of_sites)
 
-
     # Finds the first testing number for the first set of data
     first_test = ptr_data[0].split("|")[1]
 
-
-    # Gathers a list of the test numbers
+    # Gathers a list of the test numbers, avoiding the absurd number of repeats
     list_of_test_numbers = [first_test]
     for i in range(0, len(ptr_data), number_of_sites):
-        list_of_test_numbers = np.vstack([list_of_test_numbers, ptr_data[i].split("|")[1]])
-
+        if ptr_data[i].split("|")[1] in list_of_test_numbers:
+            list_of_test_numbers = list_of_test_numbers
+        else:
+            list_of_test_numbers = np.append(list_of_test_numbers, ptr_data[i].split("|")[1])
 
     # Extracts the PTR data from a given test number and stores it into an array
-    selected_ptr_test = ptr_extractor(number_of_sites, ptr_data, first_test)
+    selected_ptr_test = ptr_extractor(number_of_sites, ptr_data, '440200004')
 
-    # Test prints
+    # Test prints to be removed later
     print(selected_ptr_test)
     print(len(selected_ptr_test))
+    #print(list_of_test_numbers)
+    #print(len(list_of_test_numbers))
 
-    print(list_of_test_numbers)
-    print(len(list_of_test_numbers))
+    for i in range(0, len(selected_ptr_test), 36):
+        print(selected_ptr_test[i, 5])
+
+    #one_test = single_test_data(number_of_sites, selected_ptr_test)
+    #print(one_test)
+
 
 
     # all_ptr_tests = ptr_extractor(number_of_sites, ptr_data, first_test)
-
-
 
 
     ##########
@@ -210,6 +214,26 @@ def main():
 # IMPORTANT FUNCTIONS #
 #######################
 
+# Creates an array of arrays that has the raw data for each test site in one particular test number
+def single_test_data(num_of_sites, extracted_ptr):
+
+    single_site = []
+
+    for j in range(0, len(extracted_ptr), num_of_sites):
+
+        single_site = np.append(single_site, extracted_ptr[i, 5])
+
+    return single_site
+
+
+
+
+
+
+
+
+
+
 # Integer, Parsed List of Strings (PTR specifically), String -> Array
 # It grabs the data for a certain test in the PTR data and turns that specific test into an array of arrays
 def ptr_extractor(num_of_sites, data, test_number):
@@ -222,14 +246,17 @@ def ptr_extractor(num_of_sites, data, test_number):
     for i in range(0, len(data), num_of_sites):
         if data[i].split("|")[1] == test_number:
             starting_index = i
+            for j in range(starting_index, (starting_index + num_of_sites)):
+                ptr_array_test = np.vstack([ptr_array_test, data[j].split("|")])
 
     # Appends each row of the test's data to cover the entire test and nothing more
-    for j in range (starting_index, (starting_index + num_of_sites)):
-        ptr_array_test = np.vstack([ptr_array_test,data[j].split("|")])
+    # for j in range (starting_index, (starting_index + num_of_sites)):
+    #     ptr_array_test = np.vstack([ptr_array_test,data[j].split("|")])
 
     # Maybe I just suck at initializing arrays in numpy but I couldn't be bothered to do it without just creating an
     # array full of zeros first and then just removing it later.
     ptr_array_test = np.delete(ptr_array_test, 0, 0)
+    ptr_array_test = np.delete(ptr_array_test, 0, 1)
 
     # Returns the array weow!
     return ptr_array_test
