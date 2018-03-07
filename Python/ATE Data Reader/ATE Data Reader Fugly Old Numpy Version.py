@@ -14,7 +14,7 @@
 ###################################################
 
 ########################################################################################################################
-# The purpose of this program is to attempt to make sense of Teradyne's de-facto-standard fie format: the              #
+# The purpose of this program is to attempt to make sense of Teradyne's somewhat-standard fie format: the              #
 # Standard Test Data Format (STDF). This proprietary file format consists of non-trivially parsed and encoded          #
 # binary data and is the most commonly used format of data produced by Automatic Test Equipment (ATE), used by         #
 # companies like LTX-Credence and Teradyne. This program will be using the obscure but very helpful PySTDF library     #
@@ -39,8 +39,6 @@
 # It does not help that, going into this project, I had absolutely 0 experience with this file format and did not even #
 # know what the end results were actually supposed to look like. Given that knowledge, please don't beat me up too     #
 # badly for my messy and disorganized code. Thank you again and have mercy on me please :)                             #
-#                                                                                                                      #
-# EDIT - NEVER MIND THIS IS SO MUCH BETTER JUST NOT USING NUMPY AT ALL IDK WHAT WAS WRONG WITH ME LMAO                 #
 ########################################################################################################################
 
 ########################################################################################################################
@@ -48,10 +46,6 @@
 # appended to the end; e.g. running this on "data.std" with a file called "data.std_parsed.txt" in the same folder is  #
 # a bad idea, as it will be overwritten, due to the fact that this program creates and writes to a text file of that   #
 # naming convention. But for real, why would you even do that in the first place?                                      #
-########################################################################################################################
-
-########################################################################################################################
-# License: none yet lol. Do what you want with it for now, just credit me, let me know, and buy me food some time :)   #
 ########################################################################################################################
 
 ###################################################
@@ -181,10 +175,12 @@ def main():
     list_of_test_numbers = []
     for i in range(0, len(ptr_data), number_of_sites):
         if (ptr_data[i].split("|")[1] in list_of_test_numbers) and (ptr_data[i].split("|")[7] in list_of_test_numbers):
-            list_of_test_numbers = list_of_test_numbers
+            pass
         else:
             list_of_test_numbers.append([ptr_data[i].split("|")[1], ptr_data[i].split("|")[7]])
 
+
+    print(selected_test)
 
     selected_test_all = find_tests_of_number(selected_test[0], list_of_test_numbers)
     print(selected_test_all)
@@ -231,6 +227,7 @@ def main():
     plt.grid(color='0.9', linestyle='--', linewidth=1)
 
     plt.show()
+
 
 
 ###################################################
@@ -309,7 +306,7 @@ def plot_full_test_trend(test_data, minimum, maximum):
 
 # Plots a single site's results
 def plot_single_site_trend(site_data, min, max):
-    plt.plot(range(0, len(site_data)), site_data)
+    plt.plot(range(0,len(site_data)), site_data)
 
 
 # Creates an array of arrays that has the raw data for each test site in one particular test
@@ -318,7 +315,7 @@ def plot_single_site_trend(site_data, min, max):
 def single_test_data(num_of_sites, extracted_ptr):
 
     # Me being bad at initializing arrays again, hush
-    single_test = []
+    single_test = [np.zeros(int(len(extracted_ptr) / num_of_sites))]
 
     # Runs through once for each of the sites in the test, incrementing by 1
     for i in range(0, num_of_sites):
@@ -330,9 +327,12 @@ def single_test_data(num_of_sites, extracted_ptr):
         # next testing site
         for j in range(i, len(extracted_ptr), num_of_sites):
 
-            single_site.append(float(extracted_ptr[j][6]))
+            single_site = np.append(single_site, float(extracted_ptr[j, 5]))
 
-        single_test.append(single_site)
+        single_test = np.vstack([single_test, single_site])
+
+    # Deletes that initialized row because I suck and don't know how numpy works
+    single_test = np.delete(single_test, 0, 0)
 
     return single_test
 
@@ -343,7 +343,7 @@ def single_test_data(num_of_sites, extracted_ptr):
 def ptr_extractor(num_of_sites, data, test_number):
 
     # Initializes an array of the data from one of the tests for all test sites
-    ptr_array_test = []
+    ptr_array_test = np.zeros(len(data[0].split("|")))
 
     # Finds where in the data to start looking for the test in question
     starting_index = 0
@@ -351,7 +351,7 @@ def ptr_extractor(num_of_sites, data, test_number):
         if (data[i].split("|")[1] == test_number[0]) and (data[i].split("|")[7] == test_number[1]):
             starting_index = i
             for j in range(starting_index, (starting_index + num_of_sites)):
-                ptr_array_test.append(data[j].split("|"))
+                ptr_array_test = np.vstack([ptr_array_test, data[j].split("|")])
 
     # Appends each row of the test's data to cover the entire test and nothing more
     # for j in range (starting_index, (starting_index + num_of_sites)):
@@ -359,7 +359,8 @@ def ptr_extractor(num_of_sites, data, test_number):
 
     # Maybe I just suck at initializing arrays in numpy but I couldn't be bothered to do it without just creating an
     # array full of zeros first and then just removing it later.
-    ptr_array_test = ptr_array_test[:][1:]
+    ptr_array_test = np.delete(ptr_array_test, 0, 0)
+    ptr_array_test = np.delete(ptr_array_test, 0, 1)
 
     # Returns the array weow!
     return ptr_array_test
