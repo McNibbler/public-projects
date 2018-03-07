@@ -1,8 +1,8 @@
 ###################################################
 # ATE STDF Data Reader Python Edition             #
-# Version 0.3                                     #
+# Version 0.4                                     #
 #                                                 #
-# March 6, 2018                                   #
+# March 7, 2018                                   #
 # Thomas Kaunzinger                               #
 # LTX-Credence / XCerra Corp.                     #
 #                                                 #
@@ -126,19 +126,7 @@ def main():
     print(len(data))
 
     # Separates the different types of data from the text file into their own sets. Here, I am initializing the arrays.
-    far_data = []
-    mir_data = []
-    sdr_data = []
-    pmr_data = []
-    pgr_data = []
-    pir_data = []
-    ptr_data = []
-    prr_data = []
-    tsr_data = []
-    hbr_data = []
-    sbr_data = []
-    pcr_data = []
-    mrr_data = []
+    far_data, mir_data, sdr_data, pmr_data, pgr_data, pir_data, ptr_data, prr_data, tsr_data, hbr_data, sbr_data, pcr_data, mrr_data = [], [], [], [], [], [], [], [], [], [], [], [], []
 
     # Appends each set of data to their own personal arrays
     for i in range(0, len(data) - 1):
@@ -176,9 +164,10 @@ def main():
     print(number_of_sites)
 
     # Selects a test number + name combination for a given index
-    test_index = 152
+    test_index = 200
     selected_test = [ptr_data[number_of_sites*test_index].split("|")[1], ptr_data[number_of_sites*test_index].split("|")[7]]
 
+    # Finds the tuple of test number / test name for the first test in the file
     first_test = [ptr_data[0].split("|")[1], ptr_data[0].split("|")[7]]
 
     # Gathers a list of the test numbers and the tests ran for each site, avoiding repeats from rerun tests
@@ -192,26 +181,39 @@ def main():
     list_of_test_numbers = np.delete(list_of_test_numbers, 0, 0)
 
 
+    selected_test_all = find_tests_of_number(selected_test[0], list_of_test_numbers)
+    print(selected_test_all)
+
+
     # Extracts the PTR data from a given test number + test name and stores it into an array
     selected_ptr_test = ptr_extractor(number_of_sites, ptr_data, selected_test)
+    print(selected_ptr_test)
+    print(selected_test)
 
-    # # Test prints to debug. To be removed later
-    # print(selected_ptr_test)
-    # print(len(selected_ptr_test))
-    # print(list_of_test_numbers)
-    # print(len(list_of_test_numbers))
+    # Extracts the PTR data for all test numbers selected in the list
+    all_ptr_test = []
+    for i in range(0, len(selected_test_all)):
+        all_ptr_test.append(ptr_extractor(number_of_sites, ptr_data, selected_test_all[i]))
+    print(all_ptr_test)
 
-
-    for i in range(0, len(selected_ptr_test), number_of_sites):
-        print(selected_ptr_test[i, 5])
-
+    # Gathers each set of data from all runs for each site in one test, arranging them in a sequential array of arrays
     one_test = single_test_data(number_of_sites, selected_ptr_test)
     print(one_test)
+
+    # Gathers each set of data from all runs for each site in all selected tests
+    all_test = []
+    for i in range(len(all_ptr_test)):
+        all_test.append(single_test_data(number_of_sites, all_ptr_test[i]))
+
+    plot_list_of_tests(all_test, ptr_data, number_of_sites)
+
+
+    # print(selected_test_all_data)
 
 
     # I'm so shook it's doing something I actually want it to do
     # Still needs a lot of love tho because this file is disorganized like all hell
-    plt.figure(1)
+    plt.figure()
 
     lower_limit = get_plot_min(ptr_data, selected_test, number_of_sites)
     upper_limit = get_plot_max(ptr_data, selected_test, number_of_sites)
@@ -225,12 +227,43 @@ def main():
 
     plt.show()
 
+    plot_list_of_tests(selected_test_all_data, ptr_data, number_of_sites)
+
 
 ###################################################
 
 #######################
 # IMPORTANT FUNCTIONS #
 #######################
+
+def plot_list_of_tests(test_list, data, num_of_sites):
+    for i in range(0, len(test_list)):
+        plt.figure()
+        low_lim = get_plot_min(data, test_list[i], num_of_sites)
+        print(low_lim)
+        hi_lim = get_plot_max(data, test_list[i], num_of_sites)
+        print(hi_lim)
+        print(test_list[i])
+        plot_full_test_trend(test_list[i], low_lim, hi_lim)
+        plt.show()
+
+
+
+# TestNumber (string) + ListOfTests (list of tuples) -> ListOfTests with TestNumber as the 0th index (list of tuples)
+# Takes a string representing a test number and returns any test names associated with that test number
+#   e.g. one test number may be 1234 and might have 40 tests run on it, but it may be 20 tests under
+#   the name "device_test_20kHz" and then another 20 tests under the name "device_test_100kHz", meaning
+#   there were two unique tests run under the same test number.
+def find_tests_of_number(test_number, test_list):
+    tests_of_number = ['', '']
+    for i in range(0, len(test_list)):
+        if test_list[i, 0] == test_number:
+            tests_of_number = np.vstack([tests_of_number, test_list[i]])
+
+    tests_of_number = np.delete(tests_of_number, 0, 0)
+
+    return tests_of_number
+
 
 # Returns the lower allowed limit of a set of data
 def get_plot_min(data, desired_test, num_of_sites):
