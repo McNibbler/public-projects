@@ -94,13 +94,20 @@ import matplotlib.pyplot as plt
 # FILE SELECTION #
 ##################
 
-# Chose where the STDF file is located. I'll add some pretty-ness to this at some point
+user_input = False
 
-wd = os.path.dirname(os.path.abspath(__file__))
+# I'll use this later so that the user can select a file to input and also so that they can select a test they want to
+# look at individually
+if user_input:
+    pass
 
-filepath = os.path.join(wd, "Data\\data.std")
+else:
+    # Chose where the STDF file is located. I'll add some pretty-ness to this at some point
+    wd = os.path.dirname(os.path.abspath(__file__))
 
-print(filepath)
+    filepath = os.path.join(wd, "Data\\data.std")
+
+    print('Your filepath is located at: ' + filepath)
 
 
 ###################################################
@@ -115,16 +122,12 @@ def main():
     # Parses that big boi into a text file
     # process_file(filepath)
 
-    # This one is way too slow. Use with caution.
+    # This one is way too slow. Use with caution. Very good for visualizing how the parsed text file is organized.
     # toExcel(filepath)
 
     # Finds and opens the recently created parsed text file
     parsedDataFile = filepath + "_parsed.txt"
     data = open(parsedDataFile).read().splitlines()
-
-    # Checks that it's actually correct
-    print(data[0:10])
-    print(len(data))
 
     # Separates the different types of data from the text file into their own sets. Here, I am initializing the arrays.
     far_data, mir_data, sdr_data, pmr_data, pgr_data, pir_data, ptr_data, prr_data, tsr_data, hbr_data, sbr_data, pcr_data, mrr_data = [], [], [], [], [], [], [], [], [], [], [], [], []
@@ -159,19 +162,18 @@ def main():
             mrr_data.append(data[i])
 
 
-
     # finds the number of lines per test, one line for each site being tested
     sdr_parse = sdr_data[0].split("|")
     number_of_sites = int(sdr_parse[3])
-    print(number_of_sites)
+    print('Number of testing sites per test: ' + str(number_of_sites))
 
     # Selects a test number + name combination for a given index
-    test_index = 200
+    test_index = 82
     selected_test = [ptr_data[number_of_sites*test_index].split("|")[1], ptr_data[number_of_sites*test_index].split("|")[7]]
-    print(selected_test)
+    print('Selected test: ' + str(selected_test))
 
-    # Finds the tuple of test number / test name for the first test in the file
-    first_test = [ptr_data[0].split("|")[1], ptr_data[0].split("|")[7]]
+    # # Finds the tuple of test number / test name for the first test in the file (unused afaik but it could be useful)
+    # first_test = [ptr_data[0].split("|")[1], ptr_data[0].split("|")[7]]
 
     # Gathers a list of the test numbers and the tests ran for each site, avoiding repeats from rerun tests
     # Not used at the moment but who knows?
@@ -190,18 +192,15 @@ def main():
 
     # Extracts the PTR data from a given test number + test name and stores it into an array
     selected_ptr_test = ptr_extractor(number_of_sites, ptr_data, selected_test)
-    print(selected_ptr_test)
 
     # Extracts the PTR data for the selected test number
     all_ptr_test = []
     for i in range(0, len(selected_test_all)):
         all_ptr_test.append(ptr_extractor(number_of_sites, ptr_data, selected_test_all[i]))
-    print(all_ptr_test)
 
 
     # Gathers each set of data from all runs for each site in one test, arranging them in a sequential array of arrays
     one_test = single_test_data(number_of_sites, selected_ptr_test)
-    print(one_test)
 
     # Gathers each set of data from all runs for each site in all selected tests
     all_test = []
@@ -213,21 +212,22 @@ def main():
     # plots all of the tests under the selected test number
     plot_list_of_tests(all_test, ptr_data, number_of_sites, selected_test_all)
 
-    # I'm so shook it's doing something I actually want it to do
-    # Still needs a lot of love tho because this file is disorganized like all hell
-    plt.figure()
-
-    lower_limit = get_plot_min(ptr_data, selected_test, number_of_sites)
-    upper_limit = get_plot_max(ptr_data, selected_test, number_of_sites)
-
-    plot_full_test_trend(one_test, lower_limit, upper_limit)
-
-    plt.xlabel("Test Number")
-    plt.ylabel("Results")
-    plt.title(str("Test: " + selected_test[0] + " - " + selected_test[1]))
-    plt.grid(color='0.9', linestyle='--', linewidth=1)
-
-    plt.show()
+    # # I'm so shook it's doing something I actually want it to do
+    # # Still needs a lot of love tho because this file is disorganized like all hell
+    #
+    # plt.figure()
+    #
+    # lower_limit = get_plot_min(ptr_data, selected_test, number_of_sites)
+    # upper_limit = get_plot_max(ptr_data, selected_test, number_of_sites)
+    #
+    # plot_full_test_trend(one_test, lower_limit, upper_limit)
+    #
+    # plt.xlabel("Test Number")
+    # plt.ylabel("Results")
+    # plt.title(str("Test: " + selected_test[0] + " - " + selected_test[1]))
+    # plt.grid(color='0.9', linestyle='--', linewidth=1)
+    #
+    # plt.show()
 
 
 ###################################################
@@ -244,13 +244,9 @@ def plot_list_of_tests(test_list_data, data, num_of_sites, test_list):
 
     # Runs through each of the tests in the list
     for i in range(0, len(test_list)):
-        print(len(test_list))
         plt.figure()
-        print(test_list[0])
         low_lim = get_plot_min(data, test_list[0], num_of_sites)
-        print(low_lim)
         hi_lim = get_plot_max(data, test_list[0], num_of_sites)
-        print(hi_lim)
         plot_full_test_trend(test_list_data[i], low_lim, hi_lim)
         plt.xlabel("Test Number")
         plt.ylabel("Results")

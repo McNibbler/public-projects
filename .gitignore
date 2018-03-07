@@ -25,3 +25,6 @@
 # Because I don't need to include the entire RADAR/PySTDF libraries
 /R/ATE Data Reader/RADAR Files/*
 /Python/ATE Data Reader/pystdf-master/*
+
+# I'll probably end up deleting this ancient history but like for now I'll just ignore it
+/Python/ATE Data Reader/ATE Data Reader Fugly Old Numpy Version.py
