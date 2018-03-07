@@ -22,25 +22,18 @@
 #                                                                                                                      #
 # This project can be found here: https://github.com/McNibbler/public-projects/tree/master/Python/ATE%20Data%20Reader  #
 #   Note: repository contains more projects than just the ATE Reader. Please check them out if you're interested :)    #
+#   I may move this project to its own repository at some point after I get a full, functional version of it.          #
 #                                                                                                                      #
 # The PySTDF library project can be found here: https://github.com/cmars/pystdf                                        #
 ########################################################################################################################
 
 ########################################################################################################################
-# I also want to apologize in advance for some stupid code; e.g when I was creating arrays and I did something like:   #
-#                                                                                                                      #
-# np.zeros(...)                                                                                                        #
-# SOME CODE TO DO SOMETHING TO THE ARRAY                                                                               #
-# np.delete(... , 0, 0)                                                                                                #
-#                                                                                                                      #
-# I get this is really stupid, but frankly I haven't used python (or numpy at all) for anything like this in years and #
-# I really can't be bothered to figure out the "proper" way to initialize and append to numpy arrays so this is my     #
-# lazy solution and it works well enough for now so I don't really care if it looks stupid. Maybe I'll fix it later.   #
-# It does not help that, going into this project, I had absolutely 0 experience with this file format and did not even #
-# know what the end results were actually supposed to look like. Given that knowledge, please don't beat me up too     #
-# badly for my messy and disorganized code. Thank you again and have mercy on me please :)                             #
-#                                                                                                                      #
-# EDIT - NEVER MIND THIS IS SO MUCH BETTER JUST NOT USING NUMPY AT ALL IDK WHAT WAS WRONG WITH ME LMAO                 #
+# This is the part where I apologize for having some likely extremely jank code. For a while, this project used some   #
+# horrible combination of numpy and python's normal arrays because I didn't really remember what I was doing, due to   #
+# not using python much like this for a long time. That has since been cleaned up, but I know as a fact that there's   #
+# still plenty of horrible things in my code and it's probably disgustingly organized, but just bear with me. Maybe if #
+# I at all knew what I was supposed to do when I started this, it would have worked out better, but for now we're just #
+# gonna roll with it. Have mercy on me :)                                                                              #
 ########################################################################################################################
 
 ########################################################################################################################
@@ -62,6 +55,7 @@
 
 # Importing a bunch of stuff that I probably won't even need but we'll just roll with it for now. I actually don't even
 # know what libraries here I actually am using at the moment so that's fun.
+
 from __future__ import print_function
 
 from pystdf.IO import *
@@ -117,6 +111,7 @@ print(filepath)
 
 # Defining the main method
 def main():
+
     # Parses that big boi into a text file
     # process_file(filepath)
 
@@ -164,6 +159,7 @@ def main():
             mrr_data.append(data[i])
 
 
+
     # finds the number of lines per test, one line for each site being tested
     sdr_parse = sdr_data[0].split("|")
     number_of_sites = int(sdr_parse[3])
@@ -172,6 +168,7 @@ def main():
     # Selects a test number + name combination for a given index
     test_index = 200
     selected_test = [ptr_data[number_of_sites*test_index].split("|")[1], ptr_data[number_of_sites*test_index].split("|")[7]]
+    print(selected_test)
 
     # Finds the tuple of test number / test name for the first test in the file
     first_test = [ptr_data[0].split("|")[1], ptr_data[0].split("|")[7]]
@@ -180,41 +177,41 @@ def main():
     # Not used at the moment but who knows?
     list_of_test_numbers = []
     for i in range(0, len(ptr_data), number_of_sites):
-        if (ptr_data[i].split("|")[1] in list_of_test_numbers) and (ptr_data[i].split("|")[7] in list_of_test_numbers):
+        if [ptr_data[i].split("|")[1], ptr_data[i].split("|")[7]] in list_of_test_numbers:
             list_of_test_numbers = list_of_test_numbers
         else:
             list_of_test_numbers.append([ptr_data[i].split("|")[1], ptr_data[i].split("|")[7]])
 
-
+    # Creates a list of tuples that contains the test number and name for all of the tests that have the same number az
+    #   selected_test
     selected_test_all = find_tests_of_number(selected_test[0], list_of_test_numbers)
-    print(selected_test_all)
+
 
 
     # Extracts the PTR data from a given test number + test name and stores it into an array
     selected_ptr_test = ptr_extractor(number_of_sites, ptr_data, selected_test)
     print(selected_ptr_test)
-    print(selected_test)
 
-    # # Extracts the PTR data for all test numbers selected in the list
-    # all_ptr_test = []
-    # for i in range(0, len(selected_test_all)):
-    #     all_ptr_test.append(ptr_extractor(number_of_sites, ptr_data, selected_test_all[i]))
-    # print(all_ptr_test)
+    # Extracts the PTR data for the selected test number
+    all_ptr_test = []
+    for i in range(0, len(selected_test_all)):
+        all_ptr_test.append(ptr_extractor(number_of_sites, ptr_data, selected_test_all[i]))
+    print(all_ptr_test)
+
 
     # Gathers each set of data from all runs for each site in one test, arranging them in a sequential array of arrays
     one_test = single_test_data(number_of_sites, selected_ptr_test)
     print(one_test)
 
-    # # Gathers each set of data from all runs for each site in all selected tests
-    # all_test = []
-    # for i in range(len(all_ptr_test)):
-    #     all_test.append(single_test_data(number_of_sites, all_ptr_test[i]))
-    #
-    # plot_list_of_tests(all_test, ptr_data, number_of_sites)
+    # Gathers each set of data from all runs for each site in all selected tests
+    all_test = []
+    for i in range(len(all_ptr_test)):
+        all_test.append(single_test_data(number_of_sites, all_ptr_test[i]))
 
 
-    # print(selected_test_all_data)
 
+    # plots all of the tests under the selected test number
+    plot_list_of_tests(all_test, ptr_data, number_of_sites, selected_test_all)
 
     # I'm so shook it's doing something I actually want it to do
     # Still needs a lot of love tho because this file is disorganized like all hell
@@ -227,7 +224,7 @@ def main():
 
     plt.xlabel("Test Number")
     plt.ylabel("Results")
-    plt.title("Data Trendline")
+    plt.title(str("Test: " + selected_test[0] + " - " + selected_test[1]))
     plt.grid(color='0.9', linestyle='--', linewidth=1)
 
     plt.show()
@@ -239,17 +236,27 @@ def main():
 # IMPORTANT FUNCTIONS #
 #######################
 
-def plot_list_of_tests(test_list, data, num_of_sites):
-    for i in range(0, len(test_list)):
-        plt.figure()
-        low_lim = get_plot_min(data, test_list[i], num_of_sites)
-        print(low_lim)
-        hi_lim = get_plot_max(data, test_list[i], num_of_sites)
-        print(hi_lim)
-        print(test_list[i])
-        plot_full_test_trend(test_list[i], low_lim, hi_lim)
-        plt.show()
+# Given a set of data for each test, the full set of ptr data, the number of sites, and the list of names/tests for the
+#   set of data needed, expect each item in this set of data to be plotted in a new figure
+# test_list_data should be an array of arrays of arrays with the same length as test_list, which is an array of tuples
+#   with each tuple representing the test number and name of the test data in that specific trial
+def plot_list_of_tests(test_list_data, data, num_of_sites, test_list):
 
+    # Runs through each of the tests in the list
+    for i in range(0, len(test_list)):
+        print(len(test_list))
+        plt.figure()
+        print(test_list[0])
+        low_lim = get_plot_min(data, test_list[0], num_of_sites)
+        print(low_lim)
+        hi_lim = get_plot_max(data, test_list[0], num_of_sites)
+        print(hi_lim)
+        plot_full_test_trend(test_list_data[i], low_lim, hi_lim)
+        plt.xlabel("Test Number")
+        plt.ylabel("Results")
+        plt.title(str("Test: " + test_list[i][0] + " - " + test_list[i][1]))
+        plt.grid(color='0.9', linestyle='--', linewidth=1)
+        plt.show()
 
 
 # TestNumber (string) + ListOfTests (list of tuples) -> ListOfTests with TestNumber as the 0th index (list of tuples)
@@ -433,6 +440,7 @@ def toExcel(filename):
         else:
             columns = [field[0] for field in record[0].fieldMap]
             v.to_excel(writer, sheet_name=k, columns=columns, index=False, na_rep="N/A")
+
     writer.save()
 
 
