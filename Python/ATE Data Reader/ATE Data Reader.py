@@ -212,6 +212,10 @@ def main():
     # plots all of the tests under the selected test number
     plot_list_of_tests(all_test, ptr_data, number_of_sites, selected_test_all)
 
+    lower_limit = get_plot_min(ptr_data, selected_test, number_of_sites)
+    upper_limit = get_plot_max(ptr_data, selected_test, number_of_sites)
+    print(table_of_results(one_test, lower_limit, upper_limit))
+
     # # I'm so shook it's doing something I actually want it to do
     # # Still needs a lot of love tho because this file is disorganized like all hell
     #
@@ -309,7 +313,7 @@ def get_plot_extremes(data, desired_test, num_of_sites):
             minimum_test = float(data[temp].split("|")[13])
             maximum_test = float(data[temp].split("|")[14])
             not_found = False
-        temp = temp + num_of_sites
+        temp += num_of_sites
     return [minimum_test, maximum_test]
 
 
@@ -331,10 +335,52 @@ def plot_full_test_trend(test_data, minimum, maximum):
 
 
 # Plots the table of the results of all the tests to visualize the data
-def table_of_results():
+def table_of_results(test_data, minimum, maximum):
 
     parameters = ['Site', 'Runs', 'Fails', 'Min', 'Mean', 'Max', 'Range', "STD", 'Cp', 'Cpk']
 
+    test_results = []
+
+    all_data = []
+    for i in range(0, len(test_data)):
+        all_data = np.append(all_data, test_data[i])
+
+    print(all_data)
+
+    test_results.append(site_array(all_data, minimum, maximum, "ALL"))
+
+    for i in range(0, len(test_data)):
+        test_results.append(site_array(test_data[i], minimum, maximum, i + 1))
+
+    #table = pd.DataFrame(test_results, columns=parameters)
+
+    return test_results
+
+
+
+def site_array(site_data, minimum, maximum, site_number):
+    site_results = []
+    site_results.append(site_number)
+    site_results.append(len(site_data))
+    site_results.append(calculate_fails(site_data, minimum, maximum))
+    site_results.append(min(site_data))
+    site_results.append(max(site_data))
+    site_results.append(max(site_data) - min(site_data))
+    site_results.append(np.std(site_data))
+    site_results.append(cp(site_data, minimum, maximum))
+    site_results.append(cpk(site_data, minimum, maximum))
+
+
+# Counts the number of fails in a data set
+def calculate_fails(site_data, minimum, maximum):
+    fails_count = 0
+
+    # Increase a fails counter for every data point that exceeds an extreme
+    for i in range(0, len(site_data)):
+        if site_data[i] > maximum or site_data[i] < minimum:
+            fails_count += 1
+
+    return fails_count
 
 
 # Plots the historgram results of all sites from one test
@@ -485,6 +531,26 @@ def toExcel(filename):
             v.to_excel(writer, sheet_name=k, columns=columns, index=False, na_rep="N/A")
 
     writer.save()
+
+
+# CP AND CPK FUNCTIONS
+# Credit to: countrymarmot on github gist:  https://gist.github.com/countrymarmot/8413981
+def cp(site_data, minimum, maximum):
+    arr = np.array(site_data)
+    arr = arr.ravel()
+    sigma = np.std(arr)
+    Cp = float(maximum - minimum) / (6*sigma)
+    return Cp
+
+def cpk(site_data, minimum, maximum):
+    arr = np.array(site_data)
+    arr = arr.ravel()
+    sigma = np.std(arr)
+    m = np.mean(arr)
+    Cpu = float(maximum - m) / (3*sigma)
+    Cpl = float(m - minimum) / (3*sigma)
+    Cpk = np.min([Cpu, Cpl])
+    return Cpk
 
 
 ###################################################
