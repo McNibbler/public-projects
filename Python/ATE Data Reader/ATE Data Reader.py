@@ -132,7 +132,8 @@ def main():
     # Separates the different types of data from the text file into their own sets. Here, I am initializing the arrays.
     far_data, mir_data, sdr_data, pmr_data, pgr_data, pir_data, ptr_data, prr_data, tsr_data, hbr_data, sbr_data, pcr_data, mrr_data = [], [], [], [], [], [], [], [], [], [], [], [], []
 
-    # Appends each set of data to their own personal arrays
+    # Appends each set of data to their own personal arrays.
+    # Python doesn't have proper switch statements because God knows why
     for i in range(0, len(data) - 1):
         if data[i].startswith("FAR"):
             far_data.append(data[i])
@@ -189,7 +190,6 @@ def main():
     selected_test_all = find_tests_of_number(selected_test[0], list_of_test_numbers)
 
 
-
     # Extracts the PTR data from a given test number + test name and stores it into an array
     selected_ptr_test = ptr_extractor(number_of_sites, ptr_data, selected_test)
 
@@ -212,15 +212,15 @@ def main():
     # plots all of the tests under the selected test number
     plot_list_of_tests(all_test, ptr_data, number_of_sites, selected_test_all)
 
-    # I'm so shook it's doing something I actually want it to do
-    # Still needs a lot of love tho because this file is disorganized like all hell
-
-    plt.figure()
-
-    lower_limit = get_plot_min(ptr_data, selected_test, number_of_sites)
-    upper_limit = get_plot_max(ptr_data, selected_test, number_of_sites)
-
-    plot_full_test_hist(one_test, lower_limit, upper_limit)
+    # # I'm so shook it's doing something I actually want it to do
+    # # Still needs a lot of love tho because this file is disorganized like all hell
+    #
+    # plt.figure()
+    #
+    # lower_limit = get_plot_min(ptr_data, selected_test, number_of_sites)
+    # upper_limit = get_plot_max(ptr_data, selected_test, number_of_sites)
+    #
+    # plot_full_test_hist(one_test, lower_limit, upper_limit)
 
     # plt.xlabel("Test Number")
     # plt.ylabel("Results")
@@ -241,18 +241,39 @@ def main():
 # test_list_data should be an array of arrays of arrays with the same length as test_list, which is an array of tuples
 #   with each tuple representing the test number and name of the test data in that specific trial
 def plot_list_of_tests(test_list_data, data, num_of_sites, test_list):
-
-    # Runs through each of the tests in the list
+    # Runs through each of the tests in the list and plots it in a new figure
     for i in range(0, len(test_list)):
         plt.figure()
-        low_lim = get_plot_min(data, test_list[0], num_of_sites)
-        hi_lim = get_plot_max(data, test_list[0], num_of_sites)
-        plot_full_test_trend(test_list_data[i], low_lim, hi_lim)
-        plt.xlabel("Test Number")
-        plt.ylabel("Results")
-        plt.title(str("Test: " + test_list[i][0] + " - " + test_list[i][1]))
-        plt.grid(color='0.9', linestyle='--', linewidth=1)
+        plot_everything_from_one_test(test_list_data[i], data, num_of_sites, test_list[i])
         plt.show()
+
+# Plots the results of everything from one test
+def plot_everything_from_one_test(test_data, data, num_of_sites, test_tuple):
+    # Title for everything
+    plt.suptitle(str("Test: " + test_tuple[0] + " - " + test_tuple[1]))
+
+    # Find the limits
+    low_lim = get_plot_min(data, test_tuple, num_of_sites)
+    hi_lim = get_plot_max(data, test_tuple, num_of_sites)
+
+    # Plots the trendline
+    plt.subplot(121)
+    plot_full_test_trend(test_data, low_lim, hi_lim)
+    plt.xlabel("Test Number")
+    plt.ylabel("Results")
+    plt.title("Trendline")
+    plt.grid(color='0.9', linestyle='--', linewidth=1)
+
+    # Plots the histogram
+    plt.subplot(122)
+    plot_full_test_hist(test_data, low_lim, hi_lim)
+    plt.xlabel("Results")
+    plt.ylabel("Trials")
+    plt.title("Histogram")
+    plt.grid(color='0.9', linestyle='--', linewidth=1, axis='y')
+
+
+
 
 
 # TestNumber (string) + ListOfTests (list of tuples) -> ListOfTests with TestNumber as the 0th index (list of tuples)
@@ -309,6 +330,13 @@ def plot_full_test_trend(test_data, minimum, maximum):
     plt.ylim(ymax= maximum + abs(0.05 * expand))
 
 
+# Plots the table of the results of all the tests to visualize the data
+def table_of_results():
+
+    parameters = ['Site', 'Runs', 'Fails', 'Min', 'Mean', 'Max', 'Range', "STD", 'Cp', 'Cpk']
+
+
+
 # Plots the historgram results of all sites from one test
 def plot_full_test_hist(test_data, minimum, maximum):
 
@@ -316,14 +344,11 @@ def plot_full_test_hist(test_data, minimum, maximum):
     for i in range(0, len(test_data)):
         plot_single_site_hist(test_data[i], minimum, maximum)
 
-    # # Plots the minimum and maximum barriers
-    # plt.plot(range(0, len(test_data[0])), [minimum] * len(test_data[0]), color="red", linewidth=3.0)
-    # plt.plot(range(0, len(test_data[0])), [maximum] * len(test_data[0]), color="red", linewidth=3.0)
-
-    # # My feeble attempt to get pretty dynamic limits
-    # expand = max([abs(minimum), abs(maximum)])
-    # plt.ylim(ymin= minimum - abs(0.05 * expand))
-    # plt.ylim(ymax= maximum + abs(0.05 * expand))
+    # My feeble attempt to get pretty dynamic limits
+    plt.ylim(ymin=0)
+    plt.ylim(ymax=len(test_data[0]))
+    plt.xlim(xmin=minimum)
+    plt.xlim(xmax=maximum)
 
 
 # Plots a single site's results
@@ -334,8 +359,7 @@ def plot_single_site_trend(site_data):
 def plot_single_site_hist(site_data, minimum, maximum):
     # At the moment the bins are the same as they are in the results. Will add fail bin later.
     binboi = np.linspace(minimum, maximum, 21)
-    plt.hist(np.clip(site_data, binboi[0], binboi[-1]), bins=binboi)
-
+    plt.hist(np.clip(site_data, binboi[0], binboi[-1]), bins=binboi, edgecolor='white', linewidth=0.5)
 
 
 # Creates an array of arrays that has the raw data for each test site in one particular test
