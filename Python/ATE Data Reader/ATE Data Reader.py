@@ -298,12 +298,13 @@ def plot_everything_from_one_test(test_data, data, num_of_sites, test_tuple):
     hi_lim = get_plot_max(data, test_tuple, num_of_sites)
 
     table = table_of_results(test_data, low_lim, hi_lim)
+    table = table[0:17]
 
     # d = {'x{}'.format(i): range(30) for i in range(10)}
     #
     # table = pd.DataFrame(d)
 
-    plt.subplot(121)
+    plt.subplot(211)
     cell_text = []
     for row in range(len(table)):
         cell_text.append(table.iloc[row])
@@ -313,7 +314,7 @@ def plot_everything_from_one_test(test_data, data, num_of_sites, test_tuple):
 
 
     # Plots the trendline
-    plt.subplot(222)
+    plt.subplot(223)
     plot_full_test_trend(test_data, low_lim, hi_lim)
     plt.xlabel("Test Number")
     plt.ylabel("Results")
