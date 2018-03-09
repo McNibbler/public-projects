@@ -62,6 +62,7 @@ from __future__ import print_function
 import os
 import sys
 
+from matplotlib.backends.backend_pdf import PdfPages
 from pystdf.IO import *
 from pystdf.Writers import *
 
@@ -88,6 +89,7 @@ bz2Pattern = re.compile('\.bz2', re.I)
 
 import numpy as np
 import matplotlib.pyplot as plt
+from decimal import Decimal
 
 ###################################################
 
@@ -168,7 +170,6 @@ def main():
     # plt.text(0.1, 0.85, 'dummy text\nmeme', horizontalalignment='left', verticalalignment='center', transform=ax.transAxes)
 
 
-
     # finds the number of lines per test, one line for each site being tested
     sdr_parse = sdr_data[0].split("|")
     number_of_sites = int(sdr_parse[3])
@@ -225,9 +226,11 @@ def main():
     upper_limit = get_plot_max(ptr_data, selected_test, number_of_sites)
     print(table_of_results(one_test, lower_limit, upper_limit))
 
+
+
     # fig, axs = plt.subplots(1, 1)
-    tableboi = table_of_results(one_test, lower_limit, upper_limit)
-    labelboi = ('Site', 'Runs', 'Fails', 'Min', 'Mean', 'Max', 'Range', "STD", 'Cp', 'Cpk')
+    # tableboi = table_of_results(one_test, lower_limit, upper_limit)
+    # labelboi = ('Site', 'Runs', 'Fails', 'Min', 'Mean', 'Max', 'Range', "STD", 'Cp', 'Cpk')
     # axs.axis('tight')
     # axs.axis('off')
     # the_table = axs.table(cellText=clust_data[0:10], colLabels=collabel, loc='center')
@@ -236,15 +239,14 @@ def main():
     #
     # plt.show()
 
-    ax = plt.subplot(211, frame_on=False)
-    ax.xaxis.set_visible(False)
-    ax.yaxis.set_visible(False)
-
-    the_table = plt.table(cellText=tableboi[0:4],
-                          colWidths=[0.1] * len(labelboi),
-                          colLabels=labelboi, cellLoc='top', rowLoc='top')
-
-    plt.show()
+    # ax = plt.subplot(121, frame_on=False)
+    # ax.xaxis.set_visible(False)
+    # ax.yaxis.set_visible(False)
+    # ax.axis('tight')
+    #
+    # plt.table(cellText=tableboi[0:10], colWidths=[0.2] * len(labelboi), colLabels=labelboi, cellLoc='top', rowLoc='top')
+    #
+    # plt.show()
 
 
     # # I'm so shook it's doing something I actually want it to do
@@ -262,7 +264,7 @@ def main():
     # plt.title(str("Test: " + selected_test[0] + " - " + selected_test[1]))
     # plt.grid(color='0.9', linestyle='--', linewidth=1)
 
-    plt.show()
+    # plt.show()
 
 
 ###################################################
@@ -277,10 +279,14 @@ def main():
 #   with each tuple representing the test number and name of the test data in that specific trial
 def plot_list_of_tests(test_list_data, data, num_of_sites, test_list):
     # Runs through each of the tests in the list and plots it in a new figure
+    pp = PdfPages('coolio.pdf')
     for i in range(0, len(test_list)):
-        plt.figure()
-        plot_everything_from_one_test(test_list_data[i], data, num_of_sites, test_list[i])
-        plt.show()
+
+        plt.figure(figsize=(11, 8.5))
+        pp.savefig(plot_everything_from_one_test(test_list_data[i], data, num_of_sites, test_list[i]))
+        # plt.show()
+
+    pp.close()
 
 # Plots the results of everything from one test
 def plot_everything_from_one_test(test_data, data, num_of_sites, test_tuple):
@@ -291,10 +297,23 @@ def plot_everything_from_one_test(test_data, data, num_of_sites, test_tuple):
     low_lim = get_plot_min(data, test_tuple, num_of_sites)
     hi_lim = get_plot_max(data, test_tuple, num_of_sites)
 
-    #plot_only_table(table_of_results(test_data, low_lim, hi_lim))
+    table = table_of_results(test_data, low_lim, hi_lim)
+
+    # d = {'x{}'.format(i): range(30) for i in range(10)}
+    #
+    # table = pd.DataFrame(d)
+
+    plt.subplot(121)
+    cell_text = []
+    for row in range(len(table)):
+        cell_text.append(table.iloc[row])
+
+    plt.table(cellText=cell_text, colLabels=table.columns, loc='center')
+    plt.axis('off')
+
 
     # Plots the trendline
-    plt.subplot(121)
+    plt.subplot(222)
     plot_full_test_trend(test_data, low_lim, hi_lim)
     plt.xlabel("Test Number")
     plt.ylabel("Results")
@@ -302,7 +321,7 @@ def plot_everything_from_one_test(test_data, data, num_of_sites, test_tuple):
     plt.grid(color='0.9', linestyle='--', linewidth=1)
 
     # Plots the histogram
-    plt.subplot(122)
+    plt.subplot(224)
     plot_full_test_hist(test_data, low_lim, hi_lim)
     plt.xlabel("Results")
     plt.ylabel("Trials")
@@ -391,31 +410,30 @@ def table_of_results(test_data, minimum, maximum):
         test_results.append(site_array(test_data[i], minimum, maximum, i + 1))
 
     #pd.set_option('precision', 4)
-    #table = pd.DataFrame(test_results, columns=parameters)
+    table = pd.DataFrame(test_results, columns=parameters)
 
     #stringboi = "\n".join(test_results)
 
-    return test_results
+    return table
 
 
 # Returns an array a site's final test results
 def site_array(site_data, minimum, maximum, site_number):
-    site_results = [site_number, np.mean(site_data), calculate_fails(site_data, minimum, maximum),
-                     min(site_data), np.mean(site_data), max(site_data), max(site_data) - min(site_data),
-                     np.std(site_data), cp(site_data, minimum, maximum), cpk(site_data, minimum, maximum)]
+    site_results = []  #[site_number, np.mean(site_data), calculate_fails(site_data, minimum, maximum),
+                   #  min(site_data), np.mean(site_data), max(site_data), max(site_data) - min(site_data),
+                   #  np.std(site_data), cp(site_data, minimum, maximum), cpk(site_data, minimum, maximum)]
 
+    site_results.append(str(site_number))
+    site_results.append(str(len(site_data)))
+    site_results.append(str(calculate_fails(site_data, minimum, maximum)))
+    site_results.append(str(Decimal(min(site_data)).quantize(Decimal('0.001'))))
+    site_results.append(str(Decimal(np.mean(site_data)).quantize(Decimal('0.001'))))
+    site_results.append(str(Decimal(max(site_data)).quantize(Decimal('0.001'))))
+    site_results.append(str(Decimal(max(site_data) - min(site_data)).quantize(Decimal('0.001'))))
+    site_results.append(str(Decimal(np.std(site_data)).quantize(Decimal('0.001'))))
+    site_results.append(str(Decimal(cp(site_data, minimum, maximum)).quantize(Decimal('0.001'))))
+    site_results.append(str(Decimal(cpk(site_data, minimum, maximum)).quantize(Decimal('0.001'))))
 
-
-    # site_results.append(str(Decimal(min(site_data)).quantize(Decimal('0.001'))))
-    # site_results.append(str(Decimal(np.mean(site_data)).quantize(Decimal('0.001'))))
-    # site_results.append(str(Decimal(max(site_data)).quantize(Decimal('0.001'))))
-    # site_results.append(str(Decimal(max(site_data) - min(site_data)).quantize(Decimal('0.001'))))
-    # site_results.append(str(Decimal(np.std(site_data)).quantize(Decimal('0.001'))))
-    # site_results.append(str(Decimal(cp(site_data, minimum, maximum)).quantize(Decimal('0.001'))))
-    # site_results.append(str(Decimal(cpk(site_data, minimum, maximum)).quantize(Decimal('0.001'))))
-    # site_results.append(str(len(site_data)))
-    # site_results.append(str(calculate_fails(site_data, minimum, maximum)))
-    # site_results.append(str(site_number))
 
 
 
@@ -600,6 +618,9 @@ def cpk(site_data, minimum, maximum):
     Cpl = float(m - minimum) / (3*sigma)
     Cpk = np.min([Cpu, Cpl])
     return Cpk
+
+
+
 
 
 ###################################################
