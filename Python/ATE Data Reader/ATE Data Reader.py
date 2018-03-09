@@ -59,11 +59,11 @@
 
 from __future__ import print_function
 
-from pystdf.IO import *
-from pystdf.Writers import *
-
 import os
 import sys
+
+from pystdf.IO import *
+from pystdf.Writers import *
 
 sys.path.append("/pystdf-master")
 
@@ -88,8 +88,6 @@ bz2Pattern = re.compile('\.bz2', re.I)
 
 import numpy as np
 import matplotlib.pyplot as plt
-
-from decimal import Decimal
 
 ###################################################
 
@@ -165,9 +163,10 @@ def main():
         elif data[i].startswith("MRR"):
             mrr_data.append(data[i])
 
-    fig = plt.figure()
-    ax = fig.add_subplot(1, 1, 1)
-    plt.text(0.1, 0.85, 'dummy text\nmeme', horizontalalignment='left', verticalalignment='center', transform=ax.transAxes)
+    # fig = plt.figure()
+    # ax = fig.add_subplot(1, 1, 1)
+    # plt.text(0.1, 0.85, 'dummy text\nmeme', horizontalalignment='left', verticalalignment='center', transform=ax.transAxes)
+
 
 
     # finds the number of lines per test, one line for each site being tested
@@ -225,6 +224,28 @@ def main():
     lower_limit = get_plot_min(ptr_data, selected_test, number_of_sites)
     upper_limit = get_plot_max(ptr_data, selected_test, number_of_sites)
     print(table_of_results(one_test, lower_limit, upper_limit))
+
+    # fig, axs = plt.subplots(1, 1)
+    tableboi = table_of_results(one_test, lower_limit, upper_limit)
+    labelboi = ('Site', 'Runs', 'Fails', 'Min', 'Mean', 'Max', 'Range', "STD", 'Cp', 'Cpk')
+    # axs.axis('tight')
+    # axs.axis('off')
+    # the_table = axs.table(cellText=clust_data[0:10], colLabels=collabel, loc='center')
+    # the_table.scale(0.9, 0.9)
+    # the_table.set_fontsize(200)
+    #
+    # plt.show()
+
+    ax = plt.subplot(211, frame_on=False)
+    ax.xaxis.set_visible(False)
+    ax.yaxis.set_visible(False)
+
+    the_table = plt.table(cellText=tableboi[0:4],
+                          colWidths=[0.1] * len(labelboi),
+                          colLabels=labelboi, cellLoc='top', rowLoc='top')
+
+    plt.show()
+
 
     # # I'm so shook it's doing something I actually want it to do
     # # Still needs a lot of love tho because this file is disorganized like all hell
@@ -358,41 +379,43 @@ def plot_full_test_trend(test_data, minimum, maximum):
 
 # Returns the table of the results of all the tests to visualize the data
 def table_of_results(test_data, minimum, maximum):
-    parameters = ['Min', 'Mean', 'Max', 'Range', "STD", 'Cp', 'Cpk', 'Runs', 'Fails', 'Site']
+    parameters = ['Site', 'Runs', 'Fails', 'Min', 'Mean', 'Max', 'Range', "STD", 'Cp', 'Cpk']
 
-    param_string = '\t'.join(parameters)
 
     all_data = np.concatenate(test_data, axis=0)
 
-    test_results = [param_string]
-    test_results.append('\t'.join(site_array(all_data, minimum, maximum, "ALL")))
+    test_results = []
+    test_results.append(site_array(all_data, minimum, maximum, 0))  # "ALL"))
 
     for i in range(0, len(test_data)):
-        test_results.append('\t'.join(site_array(test_data[i], minimum, maximum, i + 1)))
+        test_results.append(site_array(test_data[i], minimum, maximum, i + 1))
 
     #pd.set_option('precision', 4)
     #table = pd.DataFrame(test_results, columns=parameters)
 
-    stringboi = "\n".join(test_results)
+    #stringboi = "\n".join(test_results)
 
-    return stringboi
+    return test_results
 
 
 # Returns an array a site's final test results
 def site_array(site_data, minimum, maximum, site_number):
-    site_results = []#[str(site_number), str(len(site_data)), str(calculate_fails(site_data, minimum, maximum)),
-                     #str(round(min(site_data), 4)), str(round(np.mean(site_data), 4)), str(round(max(site_data), 4)), str(round(max(site_data) - min(site_data), 4)),
-                     #str(Decimal(np.std(site_data)).quantize(Decimal('.01'))), str(round(cp(site_data, minimum, maximum), 4)), str(round(cpk(site_data, minimum, maximum), 4))]
-    site_results.append(str(Decimal(min(site_data)).quantize(Decimal('0.001'))))
-    site_results.append(str(Decimal(np.mean(site_data)).quantize(Decimal('0.001'))))
-    site_results.append(str(Decimal(max(site_data)).quantize(Decimal('0.001'))))
-    site_results.append(str(Decimal(max(site_data) - min(site_data)).quantize(Decimal('0.001'))))
-    site_results.append(str(Decimal(np.std(site_data)).quantize(Decimal('0.001'))))
-    site_results.append(str(Decimal(cp(site_data, minimum, maximum)).quantize(Decimal('0.001'))))
-    site_results.append(str(Decimal(cpk(site_data, minimum, maximum)).quantize(Decimal('0.001'))))
-    site_results.append(str(Decimal(len(site_data)).quantize(Decimal('10000'))))
-    site_results.append(str(Decimal(calculate_fails(site_data, minimum, maximum)).quantize(Decimal('10000'))))
-    site_results.append(str(site_number))
+    site_results = [site_number, np.mean(site_data), calculate_fails(site_data, minimum, maximum),
+                     min(site_data), np.mean(site_data), max(site_data), max(site_data) - min(site_data),
+                     np.std(site_data), cp(site_data, minimum, maximum), cpk(site_data, minimum, maximum)]
+
+
+
+    # site_results.append(str(Decimal(min(site_data)).quantize(Decimal('0.001'))))
+    # site_results.append(str(Decimal(np.mean(site_data)).quantize(Decimal('0.001'))))
+    # site_results.append(str(Decimal(max(site_data)).quantize(Decimal('0.001'))))
+    # site_results.append(str(Decimal(max(site_data) - min(site_data)).quantize(Decimal('0.001'))))
+    # site_results.append(str(Decimal(np.std(site_data)).quantize(Decimal('0.001'))))
+    # site_results.append(str(Decimal(cp(site_data, minimum, maximum)).quantize(Decimal('0.001'))))
+    # site_results.append(str(Decimal(cpk(site_data, minimum, maximum)).quantize(Decimal('0.001'))))
+    # site_results.append(str(len(site_data)))
+    # site_results.append(str(calculate_fails(site_data, minimum, maximum)))
+    # site_results.append(str(site_number))
 
 
 
