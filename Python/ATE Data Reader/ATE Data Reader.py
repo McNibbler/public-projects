@@ -1,6 +1,6 @@
 ###################################################
 # ATE STDF Data Reader Python Edition             #
-# Version 0.4                                     #
+# Version 0.5                                     #
 #                                                 #
 # March 7, 2018                                   #
 # Thomas Kaunzinger                               #
@@ -10,6 +10,7 @@
 # PySTDF Library                                  #
 # numpy                                           #
 # matplotlib                                      #
+# countrymarmot (cp + cpk)                        #
 # My crying soul because there's no documentation #
 ###################################################
 
@@ -88,6 +89,8 @@ bz2Pattern = re.compile('\.bz2', re.I)
 import numpy as np
 import matplotlib.pyplot as plt
 
+from decimal import Decimal
+
 ###################################################
 
 ##################
@@ -162,6 +165,10 @@ def main():
         elif data[i].startswith("MRR"):
             mrr_data.append(data[i])
 
+    fig = plt.figure()
+    ax = fig.add_subplot(1, 1, 1)
+    plt.text(0.1, 0.85, 'dummy text\nmeme', horizontalalignment='left', verticalalignment='center', transform=ax.transAxes)
+
 
     # finds the number of lines per test, one line for each site being tested
     sdr_parse = sdr_data[0].split("|")
@@ -169,7 +176,7 @@ def main():
     print('Number of testing sites per test: ' + str(number_of_sites))
 
     # Selects a test number + name combination for a given index
-    test_index = 129    # arbitrary at the moment
+    test_index = 100    # arbitrary at the moment
     selected_test = [ptr_data[number_of_sites*test_index].split("|")[1], ptr_data[number_of_sites*test_index].split("|")[7]]
     print('Selected test: ' + str(selected_test))
 
@@ -192,6 +199,8 @@ def main():
 
     # Extracts the PTR data from a given test number + test name and stores it into an array
     selected_ptr_test = ptr_extractor(number_of_sites, ptr_data, selected_test)
+    print(selected_ptr_test)
+    print(len(selected_ptr_test))
 
     # Extracts the PTR data for the selected test number
     all_ptr_test = []
@@ -201,6 +210,7 @@ def main():
 
     # Gathers each set of data from all runs for each site in one test, arranging them in a sequential array of arrays
     one_test = single_test_data(number_of_sites, selected_ptr_test)
+
 
     # Gathers each set of data from all runs for each site in all selected tests
     all_test = []
@@ -260,6 +270,8 @@ def plot_everything_from_one_test(test_data, data, num_of_sites, test_tuple):
     low_lim = get_plot_min(data, test_tuple, num_of_sites)
     hi_lim = get_plot_max(data, test_tuple, num_of_sites)
 
+    #plot_only_table(table_of_results(test_data, low_lim, hi_lim))
+
     # Plots the trendline
     plt.subplot(121)
     plot_full_test_trend(test_data, low_lim, hi_lim)
@@ -277,6 +289,16 @@ def plot_everything_from_one_test(test_data, data, num_of_sites, test_tuple):
     plt.grid(color='0.9', linestyle='--', linewidth=1, axis='y')
 
 
+def plot_only_table(table):
+    fig, axs = plt.subplots(1, 1)
+    axs.axis('tight')
+    axs.axis('off')
+    the_table = axs.table(cellText=table.values, colLabels=table.columns, loc='center')
+    the_table.set_fontsize(24)
+    the_table.scale(0.5, 0.5)
+
+
+    plt.show()
 
 
 
@@ -334,41 +356,47 @@ def plot_full_test_trend(test_data, minimum, maximum):
     plt.ylim(ymax= maximum + abs(0.05 * expand))
 
 
-# Plots the table of the results of all the tests to visualize the data
+# Returns the table of the results of all the tests to visualize the data
 def table_of_results(test_data, minimum, maximum):
+    parameters = ['Min', 'Mean', 'Max', 'Range', "STD", 'Cp', 'Cpk', 'Runs', 'Fails', 'Site']
 
-    parameters = ['Site', 'Runs', 'Fails', 'Min', 'Mean', 'Max', 'Range', "STD", 'Cp', 'Cpk']
+    param_string = '\t'.join(parameters)
 
-    test_results = []
+    all_data = np.concatenate(test_data, axis=0)
 
-    all_data = []
-    for i in range(0, len(test_data)):
-        all_data = np.append(all_data, test_data[i])
-
-    print(all_data)
-
-    test_results.append(site_array(all_data, minimum, maximum, "ALL"))
+    test_results = [param_string]
+    test_results.append('\t'.join(site_array(all_data, minimum, maximum, "ALL")))
 
     for i in range(0, len(test_data)):
-        test_results.append(site_array(test_data[i], minimum, maximum, i + 1))
+        test_results.append('\t'.join(site_array(test_data[i], minimum, maximum, i + 1)))
 
+    #pd.set_option('precision', 4)
     #table = pd.DataFrame(test_results, columns=parameters)
 
-    return test_results
+    stringboi = "\n".join(test_results)
+
+    return stringboi
 
 
-
+# Returns an array a site's final test results
 def site_array(site_data, minimum, maximum, site_number):
-    site_results = []
-    site_results.append(site_number)
-    site_results.append(len(site_data))
-    site_results.append(calculate_fails(site_data, minimum, maximum))
-    site_results.append(min(site_data))
-    site_results.append(max(site_data))
-    site_results.append(max(site_data) - min(site_data))
-    site_results.append(np.std(site_data))
-    site_results.append(cp(site_data, minimum, maximum))
-    site_results.append(cpk(site_data, minimum, maximum))
+    site_results = []#[str(site_number), str(len(site_data)), str(calculate_fails(site_data, minimum, maximum)),
+                     #str(round(min(site_data), 4)), str(round(np.mean(site_data), 4)), str(round(max(site_data), 4)), str(round(max(site_data) - min(site_data), 4)),
+                     #str(Decimal(np.std(site_data)).quantize(Decimal('.01'))), str(round(cp(site_data, minimum, maximum), 4)), str(round(cpk(site_data, minimum, maximum), 4))]
+    site_results.append(str(Decimal(min(site_data)).quantize(Decimal('0.001'))))
+    site_results.append(str(Decimal(np.mean(site_data)).quantize(Decimal('0.001'))))
+    site_results.append(str(Decimal(max(site_data)).quantize(Decimal('0.001'))))
+    site_results.append(str(Decimal(max(site_data) - min(site_data)).quantize(Decimal('0.001'))))
+    site_results.append(str(Decimal(np.std(site_data)).quantize(Decimal('0.001'))))
+    site_results.append(str(Decimal(cp(site_data, minimum, maximum)).quantize(Decimal('0.001'))))
+    site_results.append(str(Decimal(cpk(site_data, minimum, maximum)).quantize(Decimal('0.001'))))
+    site_results.append(str(Decimal(len(site_data)).quantize(Decimal('10000'))))
+    site_results.append(str(Decimal(calculate_fails(site_data, minimum, maximum)).quantize(Decimal('10000'))))
+    site_results.append(str(site_number))
+
+
+
+    return site_results
 
 
 # Counts the number of fails in a data set
@@ -453,9 +481,7 @@ def ptr_extractor(num_of_sites, data, test_number):
     # for j in range (starting_index, (starting_index + num_of_sites)):
     #     ptr_array_test = np.vstack([ptr_array_test,data[j].split("|")])
 
-    # Maybe I just suck at initializing arrays in numpy but I couldn't be bothered to do it without just creating an
-    # array full of zeros first and then just removing it later.
-    ptr_array_test = ptr_array_test[:][1:]
+    ptr_array_test = ptr_array_test[:]
 
     # Returns the array weow!
     return ptr_array_test
