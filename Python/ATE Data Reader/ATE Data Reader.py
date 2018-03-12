@@ -1,8 +1,8 @@
 ###################################################
 # ATE STDF Data Reader Python Edition             #
-# Version 0.5                                     #
+# Version 0.6                                     #
 #                                                 #
-# March 7, 2018                                   #
+# March 12, 2018                                  #
 # Thomas Kaunzinger                               #
 # LTX-Credence / XCerra Corp.                     #
 #                                                 #
@@ -91,6 +91,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 from decimal import Decimal
 
+try:
+    from PyPDF2 import PdfFileReader, PdfFileWriter, PdfFileMerger
+except ImportError:
+    from pyPdf import PdfFileReader, PdfFileWriter, PdfFileMerger
+
 ###################################################
 
 ##################
@@ -102,7 +107,14 @@ user_input = False
 # I'll use this later so that the user can select a file to input and also so that they can select a test they want to
 # look at individually
 if user_input:
-    pass
+    filepath = input('Select file location: ')
+
+    wd = os.path.dirname(os.path.abspath(__file__))
+
+    filepath = os.path.join(wd, filepath)
+
+    print('Your filepath is located at: ' + filepath)
+
 
 else:
     # Chose where the STDF file is located. I'll add some pretty-ness to this at some point
@@ -129,8 +141,9 @@ def main():
     # toExcel(filepath)
 
     # Finds and opens the recently created parsed text file
-    parsedDataFile = filepath + "_parsed.txt"
+    parsedDataFile = str(filepath + "_parsed.txt")
     data = open(parsedDataFile).read().splitlines()
+
 
     # Separates the different types of data from the text file into their own sets. Here, I am initializing the arrays.
     far_data, mir_data, sdr_data, pmr_data, pgr_data, pir_data, ptr_data, prr_data, tsr_data, hbr_data, sbr_data, pcr_data, mrr_data = [], [], [], [], [], [], [], [], [], [], [], [], []
@@ -171,13 +184,7 @@ def main():
     number_of_sites = int(sdr_parse[3])
     print('Number of testing sites per test: ' + str(number_of_sites))
 
-    # Selects a test number + name combination for a given index
-    test_index = 100    # arbitrary at the moment
-    selected_test = [ptr_data[number_of_sites*test_index].split("|")[1], ptr_data[number_of_sites*test_index].split("|")[7]]
-    print('Selected test: ' + str(selected_test))
 
-    # # Finds the tuple of test number / test name for the first test in the file (unused afaik but it could be useful)
-    # first_test = [ptr_data[0].split("|")[1], ptr_data[0].split("|")[7]]
 
     # Gathers a list of the test numbers and the tests ran for each site, avoiding repeats from rerun tests
     # Not used at the moment but who knows?
@@ -188,15 +195,40 @@ def main():
         else:
             list_of_test_numbers.append([ptr_data[i].split("|")[1], ptr_data[i].split("|")[7]])
 
-    # Creates a list of tuples that contains the test number and name for all of the tests that have the same number az
-    #   selected_test
-    selected_test_all = find_tests_of_number(selected_test[0], list_of_test_numbers)
 
 
-    # Extracts the PTR data from a given test number + test name and stores it into an array
-    selected_ptr_test = ptr_extractor(number_of_sites, ptr_data, selected_test)
-    print(selected_ptr_test)
-    print(len(selected_ptr_test))
+
+    if user_input:
+        selected = False
+        selecting = False
+
+        while not selected:
+            choosing = input('Select Test (Otherwise Run on All)? (Y/N): ')
+            if choosing.lower() == 'y' or choosing.lower() == 'yes':
+                selecting = True
+                selected = True
+            elif choosing.lower() == 'n' or choosing.lower() == 'no':
+                selecting = False
+                selected = True
+            else:
+                print('Please select yes or no')
+
+        if not selecting:
+            selected_test_all = list_of_test_numbers
+
+
+    else:
+        # Selects a test number + name combination for a given index
+        test_index = 100  # arbitrary at the moment
+        selected_test = [ptr_data[number_of_sites * test_index].split("|")[1],
+                         ptr_data[number_of_sites * test_index].split("|")[7]]
+        print('Selected test: ' + str(selected_test))
+
+        # Creates a list of tuples that contains the test number and name for all of the tests that have the same
+        # number as selected_test
+        selected_test_all = find_tests_of_number(selected_test[0], list_of_test_numbers)
+
+
 
     # Extracts the PTR data for the selected test number
     all_ptr_test = []
@@ -204,8 +236,6 @@ def main():
         all_ptr_test.append(ptr_extractor(number_of_sites, ptr_data, selected_test_all[i]))
 
 
-    # Gathers each set of data from all runs for each site in one test, arranging them in a sequential array of arrays
-    one_test = single_test_data(number_of_sites, selected_ptr_test)
 
 
     # Gathers each set of data from all runs for each site in all selected tests
@@ -236,14 +266,28 @@ def main():
 #   with each tuple representing the test number and name of the test data in that specific trial
 def plot_list_of_tests(test_list_data, data, num_of_sites, test_list, directory):
     # Runs through each of the tests in the list and plots it in a new figure
-    pp = PdfPages(str(directory + "_results.pdf"))
+    pp = PdfFileMerger()
+
     for i in range(0, len(test_list)):
 
-        plt.figure(figsize=(11, 8.5))
-        pp.savefig(plot_everything_from_one_test(test_list_data[i], data, num_of_sites, test_list[i]))
-        # plt.show()
+        pdfTemp = PdfPages(str(directory + "_results_temp.pdf"))
 
-    pp.close()
+        plt.figure(figsize=(11, 8.5))
+        pdfTemp.savefig(plot_everything_from_one_test(test_list_data[i], data, num_of_sites, test_list[i]))
+
+        pdfTemp.close()
+
+        pp.append(PdfFileReader(str(directory + "_results_temp.pdf"), "rb"))
+
+        if i % 10 == 0:
+            print(str(i) + "/" + str(len(test_list)) + " test results completed")
+
+        plt.close()
+
+    print(str(len(test_list)) + "/" + str(len(test_list)) + " test results completed")
+
+    os.remove(str(directory + "_results_temp.pdf"))
+    pp.write(str(directory + "_results.pdf"))
 
 
 # Plots the results of everything from one test
@@ -342,8 +386,13 @@ def plot_full_test_trend(test_data, minimum, maximum):
 
     # My feeble attempt to get pretty dynamic limits
     expand = max([abs(minimum), abs(maximum)])
-    plt.ylim(ymin= minimum - abs(0.05 * expand))
-    plt.ylim(ymax= maximum + abs(0.05 * expand))
+
+    if minimum == maximum:
+        plt.ylim(ymin=-0.05)
+        plt.ylim(ymax=1.05)
+    else:
+        plt.ylim(ymin= minimum - abs(0.05 * expand))
+        plt.ylim(ymax= maximum + abs(0.05 * expand))
 
 
 # Returns the table of the results of all the tests to visualize the data
@@ -353,7 +402,6 @@ def table_of_results(test_data, minimum, maximum, units):
     # Clarification
     if units.lower() == 'db':
         parameters[7] = 'STD (%)'
-
 
     all_data = np.concatenate(test_data, axis=0)
 
@@ -376,6 +424,7 @@ def site_array(site_data, minimum, maximum, site_number, units):
     # Not actually volts, it's actually % if it's db technically but who cares
     volt_data = []
 
+
     # The struggles of logarithmic data
     if units.lower() == 'db':
 
@@ -384,15 +433,26 @@ def site_array(site_data, minimum, maximum, site_number, units):
 
         mean_result = v2db(np.mean(volt_data))
         standard_deviation = np.std(volt_data)*100  # *100 for converting to %
-        cp_result = cp(volt_data, db2v(minimum), db2v(maximum))
-        cpk_result = cpk(volt_data, db2v(minimum), db2v(maximum))
+        std_string = str('%.3E' % (Decimal(standard_deviation)))
+
+        cp_result = str(Decimal(cp(volt_data, db2v(minimum), db2v(maximum))).quantize(Decimal('0.001')))
+        cpk_result = str(Decimal(cpk(volt_data, db2v(minimum), db2v(maximum))).quantize(Decimal('0.001')))
+
+    elif units.lower() == '/f':
+        mean_result = np.mean(site_data)
+        std_string = str(np.std(site_data))
+        cp_result = 'N/A'
+        cpk_result = 'N/A'
+
 
     # Yummy linear data instead
     else:
         mean_result = np.mean(site_data)
-        standard_deviation = np.std(site_data)
-        cp_result = cp(site_data, minimum, maximum)
-        cpk_result = cpk(site_data, minimum, maximum)
+        std_string = str(Decimal(np.std(site_data)).quantize(Decimal('0.001')))
+        cp_result = str(Decimal(cp(site_data, minimum, maximum)).quantize(Decimal('0.001')))
+        cpk_result = str(Decimal(cpk(site_data, minimum, maximum)).quantize(Decimal('0.001')))
+
+
 
     # Appending all the important results weow!
     site_results.append(str(site_number))
@@ -402,18 +462,18 @@ def site_array(site_data, minimum, maximum, site_number, units):
     site_results.append(str(Decimal(mean_result).quantize(Decimal('0.001'))))
     site_results.append(str(Decimal(max(site_data)).quantize(Decimal('0.001'))))
     site_results.append(str(Decimal(max(site_data) - min(site_data)).quantize(Decimal('0.001'))))
-    site_results.append(str('%.3E' % (Decimal(standard_deviation))))
-    site_results.append(str(Decimal(cp_result).quantize(Decimal('0.001'))))
-    site_results.append(str(Decimal(cpk_result).quantize(Decimal('0.001'))))
+    site_results.append(std_string)
+    site_results.append(cp_result)
+    site_results.append(cpk_result)
 
     return site_results
 
 
-# Converts volts to decibels
+# Converts to decibels
 def v2db(v):
     return 20*np.log10(abs(v))
 
-# Converts decibels to volts
+# Converts from decibels
 def db2v(db):
     return 10 ** (db / 20)
 
@@ -438,11 +498,15 @@ def plot_full_test_hist(test_data, minimum, maximum):
         plot_single_site_hist(test_data[i], minimum, maximum)
 
     # My feeble attempt to get pretty dynamic limits
+    if minimum == maximum:
+        plt.xlim(xmin=0)
+        plt.xlim(xmax=1)
+    else:
+        plt.xlim(xmin=minimum)
+        plt.xlim(xmax=maximum)
+
     plt.ylim(ymin=0)
     plt.ylim(ymax=len(test_data[0]))
-    plt.xlim(xmin=minimum)
-    plt.xlim(xmax=maximum)
-
 
 # Plots a single site's results
 def plot_single_site_trend(site_data):
@@ -451,7 +515,11 @@ def plot_single_site_trend(site_data):
 # Plots a single site's results as a histogram
 def plot_single_site_hist(site_data, minimum, maximum):
     # At the moment the bins are the same as they are in the results. Will add fail bin later.
-    binboi = np.linspace(minimum, maximum, 21)
+    if(minimum == maximum):
+        binboi = np.linspace(0, 1, 21)
+    else:
+        binboi = np.linspace(minimum, maximum, 21)
+
     plt.hist(np.clip(site_data, binboi[0], binboi[-1]), bins=binboi, edgecolor='white', linewidth=0.5)
 
 
@@ -548,7 +616,6 @@ def process_file(filename):
 
     # We don't need to keep that file open
     f.close()
-
 
 # Similar to the previous function, takes an STDF file and creates an xlsx document with "_excel.xlsx" added to the file
 # name. This function is hella slow, so I recommend not using it if you don't need to, but we'll see if I actually end
