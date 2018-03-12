@@ -102,19 +102,20 @@ except ImportError:
 # FILE SELECTION #
 ##################
 
-user_input = False
+user_input = True
 
 # I'll use this later so that the user can select a file to input and also so that they can select a test they want to
 # look at individually
 if user_input:
     filepath = input('Select file location: ')
+    print()
 
     wd = os.path.dirname(os.path.abspath(__file__))
 
     filepath = os.path.join(wd, filepath)
 
     print('Your filepath is located at: ' + filepath)
-
+    print()
 
 else:
     # Chose where the STDF file is located. I'll add some pretty-ness to this at some point
@@ -183,11 +184,10 @@ def main():
     sdr_parse = sdr_data[0].split("|")
     number_of_sites = int(sdr_parse[3])
     print('Number of testing sites per test: ' + str(number_of_sites))
-
+    print()
 
 
     # Gathers a list of the test numbers and the tests ran for each site, avoiding repeats from rerun tests
-    # Not used at the moment but who knows?
     list_of_test_numbers = []
     for i in range(0, len(ptr_data), number_of_sites):
         if [ptr_data[i].split("|")[1], ptr_data[i].split("|")[7]] in list_of_test_numbers:
@@ -196,14 +196,14 @@ def main():
             list_of_test_numbers.append([ptr_data[i].split("|")[1], ptr_data[i].split("|")[7]])
 
 
-
-
+    # Juicy user input weow!!!
     if user_input:
         selected = False
         selecting = False
 
         while not selected:
             choosing = input('Select Test (Otherwise Run on All)? (Y/N): ')
+            print()
             if choosing.lower() == 'y' or choosing.lower() == 'yes':
                 selecting = True
                 selected = True
@@ -211,10 +211,31 @@ def main():
                 selecting = False
                 selected = True
             else:
-                print('Please select yes or no')
+                print('Please select yes or no ')
+                print()
 
         if not selecting:
             selected_test_all = list_of_test_numbers
+
+        else:
+            picked = False
+
+            while not picked:
+                test_selection = input('Input a test number you wish to observe (type "show" to show options): ')
+                print()
+
+                if test_selection.lower() == 'show':
+
+                    for i in range(0, len(list_of_test_numbers)):
+                        print(list_of_test_numbers[i])
+
+                    print()
+                    print("['Test Number', 'Test Description']")
+                    print()
+
+                else:
+                    selected_test_all = find_tests_of_number(test_selection, list_of_test_numbers)
+                    picked = True
 
 
     else:
@@ -223,6 +244,7 @@ def main():
         selected_test = [ptr_data[number_of_sites * test_index].split("|")[1],
                          ptr_data[number_of_sites * test_index].split("|")[7]]
         print('Selected test: ' + str(selected_test))
+        print()
 
         # Creates a list of tuples that contains the test number and name for all of the tests that have the same
         # number as selected_test
@@ -397,7 +419,7 @@ def plot_full_test_trend(test_data, minimum, maximum):
 
 # Returns the table of the results of all the tests to visualize the data
 def table_of_results(test_data, minimum, maximum, units):
-    parameters = ['Site', 'Runs', 'Fails', 'Min', 'Mean', 'Max', 'Range', 'STD', 'Cp', 'Cpk']
+    parameters = ['Site', 'Runs', 'Fails', 'Min', 'Mean', 'Max', 'Range', 'STD', 'Cp', 'Cpl', 'Cpu', 'Cpk']
 
     # Clarification
     if units.lower() == 'db':
@@ -424,7 +446,6 @@ def site_array(site_data, minimum, maximum, site_number, units):
     # Not actually volts, it's actually % if it's db technically but who cares
     volt_data = []
 
-
     # The struggles of logarithmic data
     if units.lower() == 'db':
 
@@ -436,23 +457,27 @@ def site_array(site_data, minimum, maximum, site_number, units):
         std_string = str('%.3E' % (Decimal(standard_deviation)))
 
         cp_result = str(Decimal(cp(volt_data, db2v(minimum), db2v(maximum))).quantize(Decimal('0.001')))
+        cpl_result = str(Decimal(cpl(volt_data, db2v(minimum))).quantize(Decimal('0.001')))
+        cpu_result = str(Decimal(cpu(volt_data, db2v(maximum))).quantize(Decimal('0.001')))
         cpk_result = str(Decimal(cpk(volt_data, db2v(minimum), db2v(maximum))).quantize(Decimal('0.001')))
 
+    # Pass/fail data is stupid
     elif units.lower() == '/f':
         mean_result = np.mean(site_data)
         std_string = str(np.std(site_data))
         cp_result = 'N/A'
+        cpl_result = 'N/A'
+        cpu_result = 'N/A'
         cpk_result = 'N/A'
-
 
     # Yummy linear data instead
     else:
         mean_result = np.mean(site_data)
         std_string = str(Decimal(np.std(site_data)).quantize(Decimal('0.001')))
         cp_result = str(Decimal(cp(site_data, minimum, maximum)).quantize(Decimal('0.001')))
+        cpl_result = str(Decimal(cpu(site_data, minimum)).quantize(Decimal('0.001')))
+        cpu_result = str(Decimal(cpl(site_data, maximum)).quantize(Decimal('0.001')))
         cpk_result = str(Decimal(cpk(site_data, minimum, maximum)).quantize(Decimal('0.001')))
-
-
 
     # Appending all the important results weow!
     site_results.append(str(site_number))
@@ -464,6 +489,8 @@ def site_array(site_data, minimum, maximum, site_number, units):
     site_results.append(str(Decimal(max(site_data) - min(site_data)).quantize(Decimal('0.001'))))
     site_results.append(std_string)
     site_results.append(cp_result)
+    site_results.append(cpl_result)
+    site_results.append(cpu_result)
     site_results.append(cpk_result)
 
     return site_results
@@ -508,15 +535,20 @@ def plot_full_test_hist(test_data, minimum, maximum):
     plt.ylim(ymin=0)
     plt.ylim(ymax=len(test_data[0]))
 
+
 # Plots a single site's results
 def plot_single_site_trend(site_data):
     plt.plot(range(0, len(site_data)), site_data)
 
+
 # Plots a single site's results as a histogram
 def plot_single_site_hist(site_data, minimum, maximum):
-    # At the moment the bins are the same as they are in the results. Will add fail bin later.
-    if(minimum == maximum):
+    # At the moment the bins are the same as they are in the previous program's results. Will add fail bin later.
+
+    # Damn pass/fail data exceptions everywhere
+    if minimum == maximum:
         binboi = np.linspace(0, 1, 21)
+
     else:
         binboi = np.linspace(minimum, maximum, 21)
 
@@ -660,6 +692,17 @@ def cpk(site_data, minimum, maximum):
     Cpk = np.min([Cpu, Cpl])
     return Cpk
 
+def cpu(site_data, maximum):
+    sigma = np.std(site_data)
+    m = np.mean(site_data)
+    Cpu = float(maximum - m) / (3 * sigma)
+    return Cpu
+
+def cpl(site_data, minimum):
+    sigma = np.std(site_data)
+    m = np.mean(site_data)
+    Cpl = float(m - minimum) / (3*sigma)
+    return Cpl
 
 
 
