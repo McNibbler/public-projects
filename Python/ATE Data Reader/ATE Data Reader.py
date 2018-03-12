@@ -136,7 +136,7 @@ else:
 def main():
 
     # Parses that big boi into a text file
-    # process_file(filepath)
+    process_file(filepath)
 
     # This one is way too slow. Use with caution. Very good for visualizing how the parsed text file is organized.
     # toExcel(filepath)
@@ -281,6 +281,20 @@ def main():
 #######################
 # IMPORTANT FUNCTIONS #
 #######################
+
+
+# IMPORTANT DOCUMENTATION I NEED TO FILL OUT TO MAKE SURE PEOPLE KNOW WHAT THE HELL IS GOING ON
+
+# ~~~~~~~~~~ Structure naming explanation (in functions) ~~~~~~~~~~ #
+# data --> ptr_data                                                 #
+#   gathered in main()                                              #
+#                                                                   #
+# test_list_data --> List of ['test_number', 'test_name']           #
+#   find_test_of_number() returns this                              #
+#   list_of_test_numbers in main() is the complete list of this     #
+#                                                                   #
+
+
 
 # Given a set of data for each test, the full set of ptr data, the number of sites, and the list of names/tests for the
 #   set of data needed, expect each item in this set of data to be plotted in a new figure
@@ -462,7 +476,7 @@ def site_array(site_data, minimum, maximum, site_number, units):
         cpk_result = str(Decimal(cpk(volt_data, db2v(minimum), db2v(maximum))).quantize(Decimal('0.001')))
 
     # Pass/fail data is stupid
-    elif units.lower() == '/f':
+    elif minimum == maximum:
         mean_result = np.mean(site_data)
         std_string = str(np.std(site_data))
         cp_result = 'N/A'
@@ -580,8 +594,8 @@ def single_test_data(num_of_sites, extracted_ptr):
     return single_test
 
 
-
-# Integer, Parsed List of Strings (PTR specifically), tuple -> Array
+# Integer (Number_of_sites), Parsed List of Strings (ptr_data specifically), tuple ([test_number, test_name])
+#   Returns -> array with just the relevant test data parsed along '|'
 # It grabs the data for a certain test in the PTR data and turns that specific test into an array of arrays
 def ptr_extractor(num_of_sites, data, test_number):
 
@@ -596,15 +610,48 @@ def ptr_extractor(num_of_sites, data, test_number):
             for j in range(starting_index, (starting_index + num_of_sites)):
                 ptr_array_test.append(data[j].split("|"))
 
-    # Appends each row of the test's data to cover the entire test and nothing more
-    # for j in range (starting_index, (starting_index + num_of_sites)):
-    #     ptr_array_test = np.vstack([ptr_array_test,data[j].split("|")])
-
-    ptr_array_test = ptr_array_test[:]
-
     # Returns the array weow!
     return ptr_array_test
 
+
+# For the four following functions, site_data is a list of raw floating point data, minimum is the lower limit and
+# maximum is the upper limit
+
+# CP AND CPK FUNCTIONS
+# Credit to: countrymarmot on github gist:  https://gist.github.com/countrymarmot/8413981
+def cp(site_data, minimum, maximum):
+    sigma = np.std(site_data)
+    cp_value = float(maximum - minimum) / (6*sigma)
+    return cp_value
+
+def cpk(site_data, minimum, maximum):
+    sigma = np.std(site_data)
+    m = np.mean(site_data)
+    cpu_value = float(maximum - m) / (3*sigma)
+    cpl_value = float(m - minimum) / (3*sigma)
+    cpk_value = np.min([cpu_value, cpl_value])
+    return cpk_value
+
+
+# One sided calculations (cpl/cpu)
+def cpl(site_data, minimum):
+    sigma = np.std(site_data)
+    m = np.mean(site_data)
+    cpl_value = float(m - minimum) / (3*sigma)
+    return cpl_value
+
+def cpu(site_data, maximum):
+    sigma = np.std(site_data)
+    m = np.mean(site_data)
+    cpu_value = float(maximum - m) / (3 * sigma)
+    return cpu_value
+
+
+###################################################
+
+############################
+# FILE READING AND PARSING #
+############################
 
 # lmfao i just took this from the stdf2text script and im trying to change it so it works but there's no documentation
 # im crying inside and out send help. I'll attempt to document it myself, but I'm so sorry for all the garbo.
@@ -612,6 +659,11 @@ def ptr_extractor(num_of_sites, data, test_number):
 # Currently, this function takes the stdf file and parses it to a text file with the name of the file, followed by a
 # "_parsed.txt", which can be open and analyzed later. Parsing is delimited with pipes, "|"
 def process_file(filename):
+
+    # Lets you know what's goin' on
+    print('Parsing data...')
+    print()
+
     # Not sure what this actually does but it was in the script so lets roll with it
     reopen_fn = None
 
@@ -643,11 +695,12 @@ def process_file(filename):
 
     # Writing to a text file instead of vomiting it to the console
     with open(newFile, 'w') as fout:
-        p.addSink(TextWriter(stream=fout))
+        p.addSink(TextWriter(stream=fout))      # fout writes it to the opened text file
         p.parse()
 
     # We don't need to keep that file open
     f.close()
+
 
 # Similar to the previous function, takes an STDF file and creates an xlsx document with "_excel.xlsx" added to the file
 # name. This function is hella slow, so I recommend not using it if you don't need to, but we'll see if I actually end
@@ -675,36 +728,6 @@ def toExcel(filename):
             v.to_excel(writer, sheet_name=k, columns=columns, index=False, na_rep="N/A")
 
     writer.save()
-
-
-# CP AND CPK FUNCTIONS
-# Credit to: countrymarmot on github gist:  https://gist.github.com/countrymarmot/8413981
-def cp(site_data, minimum, maximum):
-    sigma = np.std(site_data)
-    Cp = float(maximum - minimum) / (6*sigma)
-    return Cp
-
-def cpk(site_data, minimum, maximum):
-    sigma = np.std(site_data)
-    m = np.mean(site_data)
-    Cpu = float(maximum - m) / (3*sigma)
-    Cpl = float(m - minimum) / (3*sigma)
-    Cpk = np.min([Cpu, Cpl])
-    return Cpk
-
-def cpu(site_data, maximum):
-    sigma = np.std(site_data)
-    m = np.mean(site_data)
-    Cpu = float(maximum - m) / (3 * sigma)
-    return Cpu
-
-def cpl(site_data, minimum):
-    sigma = np.std(site_data)
-    m = np.mean(site_data)
-    Cpl = float(m - minimum) / (3*sigma)
-    return Cpl
-
-
 
 
 ###################################################
