@@ -165,10 +165,6 @@ def main():
         elif data[i].startswith("MRR"):
             mrr_data.append(data[i])
 
-    # fig = plt.figure()
-    # ax = fig.add_subplot(1, 1, 1)
-    # plt.text(0.1, 0.85, 'dummy text\nmeme', horizontalalignment='left', verticalalignment='center', transform=ax.transAxes)
-
 
     # finds the number of lines per test, one line for each site being tested
     sdr_parse = sdr_data[0].split("|")
@@ -220,51 +216,12 @@ def main():
 
 
     # plots all of the tests under the selected test number
-    plot_list_of_tests(all_test, ptr_data, number_of_sites, selected_test_all)
+    plot_list_of_tests(all_test, ptr_data, number_of_sites, selected_test_all, filepath)
 
-    lower_limit = get_plot_min(ptr_data, selected_test, number_of_sites)
-    upper_limit = get_plot_max(ptr_data, selected_test, number_of_sites)
-    print(table_of_results(one_test, lower_limit, upper_limit))
-
-
-
-    # fig, axs = plt.subplots(1, 1)
-    # tableboi = table_of_results(one_test, lower_limit, upper_limit)
-    # labelboi = ('Site', 'Runs', 'Fails', 'Min', 'Mean', 'Max', 'Range', "STD", 'Cp', 'Cpk')
-    # axs.axis('tight')
-    # axs.axis('off')
-    # the_table = axs.table(cellText=clust_data[0:10], colLabels=collabel, loc='center')
-    # the_table.scale(0.9, 0.9)
-    # the_table.set_fontsize(200)
-    #
-    # plt.show()
-
-    # ax = plt.subplot(121, frame_on=False)
-    # ax.xaxis.set_visible(False)
-    # ax.yaxis.set_visible(False)
-    # ax.axis('tight')
-    #
-    # plt.table(cellText=tableboi[0:10], colWidths=[0.2] * len(labelboi), colLabels=labelboi, cellLoc='top', rowLoc='top')
-    #
-    # plt.show()
-
-
-    # # I'm so shook it's doing something I actually want it to do
-    # # Still needs a lot of love tho because this file is disorganized like all hell
-    #
-    # plt.figure()
-    #
     # lower_limit = get_plot_min(ptr_data, selected_test, number_of_sites)
     # upper_limit = get_plot_max(ptr_data, selected_test, number_of_sites)
-    #
-    # plot_full_test_hist(one_test, lower_limit, upper_limit)
 
-    # plt.xlabel("Test Number")
-    # plt.ylabel("Results")
-    # plt.title(str("Test: " + selected_test[0] + " - " + selected_test[1]))
-    # plt.grid(color='0.9', linestyle='--', linewidth=1)
 
-    # plt.show()
 
 
 ###################################################
@@ -277,9 +234,9 @@ def main():
 #   set of data needed, expect each item in this set of data to be plotted in a new figure
 # test_list_data should be an array of arrays of arrays with the same length as test_list, which is an array of tuples
 #   with each tuple representing the test number and name of the test data in that specific trial
-def plot_list_of_tests(test_list_data, data, num_of_sites, test_list):
+def plot_list_of_tests(test_list_data, data, num_of_sites, test_list, directory):
     # Runs through each of the tests in the list and plots it in a new figure
-    pp = PdfPages('coolio.pdf')
+    pp = PdfPages(str(directory + "_results.pdf"))
     for i in range(0, len(test_list)):
 
         plt.figure(figsize=(11, 8.5))
@@ -288,22 +245,21 @@ def plot_list_of_tests(test_list_data, data, num_of_sites, test_list):
 
     pp.close()
 
+
 # Plots the results of everything from one test
 def plot_everything_from_one_test(test_data, data, num_of_sites, test_tuple):
-    # Title for everything
-    plt.suptitle(str("Test: " + test_tuple[0] + " - " + test_tuple[1]))
 
     # Find the limits
     low_lim = get_plot_min(data, test_tuple, num_of_sites)
     hi_lim = get_plot_max(data, test_tuple, num_of_sites)
+    units = get_units(data, test_tuple, num_of_sites)
 
-    table = table_of_results(test_data, low_lim, hi_lim)
+    # Title for everything
+    plt.suptitle(str("Test: " + test_tuple[0] + " - " + test_tuple[1] + " - Units: " + units))
+
+    # Plots the table of results, showing a max of 16 sites at once, plus all the collective data
+    table = table_of_results(test_data, low_lim, hi_lim, units)
     table = table[0:17]
-
-    # d = {'x{}'.format(i): range(30) for i in range(10)}
-    #
-    # table = pd.DataFrame(d)
-
     plt.subplot(211)
     cell_text = []
     for row in range(len(table)):
@@ -316,31 +272,18 @@ def plot_everything_from_one_test(test_data, data, num_of_sites, test_tuple):
     # Plots the trendline
     plt.subplot(223)
     plot_full_test_trend(test_data, low_lim, hi_lim)
-    plt.xlabel("Test Number")
-    plt.ylabel("Results")
+    plt.xlabel("Trials")
+    plt.ylabel(units)
     plt.title("Trendline")
     plt.grid(color='0.9', linestyle='--', linewidth=1)
 
     # Plots the histogram
     plt.subplot(224)
     plot_full_test_hist(test_data, low_lim, hi_lim)
-    plt.xlabel("Results")
+    plt.xlabel(units)
     plt.ylabel("Trials")
     plt.title("Histogram")
     plt.grid(color='0.9', linestyle='--', linewidth=1, axis='y')
-
-
-def plot_only_table(table):
-    fig, axs = plt.subplots(1, 1)
-    axs.axis('tight')
-    axs.axis('off')
-    the_table = axs.table(cellText=table.values, colLabels=table.columns, loc='center')
-    the_table.set_fontsize(24)
-    the_table.scale(0.5, 0.5)
-
-
-    plt.show()
-
 
 
 # TestNumber (string) + ListOfTests (list of tuples) -> ListOfTests with TestNumber as the 0th index (list of tuples)
@@ -365,19 +308,25 @@ def get_plot_min(data, desired_test, num_of_sites):
 def get_plot_max(data, desired_test, num_of_sites):
     return get_plot_extremes(data, desired_test, num_of_sites)[1]
 
-# Abstraction of above 2 functions, returns tuple with min and max
+# Returns the units for a set of data
+def get_units(data, desired_test, num_of_sites):
+    return get_plot_extremes(data, desired_test, num_of_sites)[2]
+
+# Abstraction of above 3 functions, returns tuple with min and max
 def get_plot_extremes(data, desired_test, num_of_sites):
     minimum_test = 0
     maximum_test = 1
+    units = ''
     temp = 0
     not_found = True
     while not_found:
-        if (data[temp].split("|")[1] == desired_test[0]):
+        if data[temp].split("|")[1] == desired_test[0]:
             minimum_test = float(data[temp].split("|")[13])
             maximum_test = float(data[temp].split("|")[14])
+            units = (data[temp].split("|")[15])
             not_found = False
         temp += num_of_sites
-    return [minimum_test, maximum_test]
+    return [minimum_test, maximum_test, units]
 
 
 # Plots the results of all sites from one test
@@ -398,47 +347,75 @@ def plot_full_test_trend(test_data, minimum, maximum):
 
 
 # Returns the table of the results of all the tests to visualize the data
-def table_of_results(test_data, minimum, maximum):
-    parameters = ['Site', 'Runs', 'Fails', 'Min', 'Mean', 'Max', 'Range', "STD", 'Cp', 'Cpk']
+def table_of_results(test_data, minimum, maximum, units):
+    parameters = ['Site', 'Runs', 'Fails', 'Min', 'Mean', 'Max', 'Range', 'STD', 'Cp', 'Cpk']
+
+    # Clarification
+    if units.lower() == 'db':
+        parameters[7] = 'STD (%)'
 
 
     all_data = np.concatenate(test_data, axis=0)
 
-    test_results = []
-    test_results.append(site_array(all_data, minimum, maximum, 0))  # "ALL"))
+    test_results = [site_array(all_data, minimum, maximum, 'ALL', units)]
 
     for i in range(0, len(test_data)):
-        test_results.append(site_array(test_data[i], minimum, maximum, i + 1))
+        test_results.append(site_array(test_data[i], minimum, maximum, i + 1, units))
 
-    #pd.set_option('precision', 4)
     table = pd.DataFrame(test_results, columns=parameters)
-
-    #stringboi = "\n".join(test_results)
 
     return table
 
 
 # Returns an array a site's final test results
-def site_array(site_data, minimum, maximum, site_number):
-    site_results = []  #[site_number, np.mean(site_data), calculate_fails(site_data, minimum, maximum),
-                   #  min(site_data), np.mean(site_data), max(site_data), max(site_data) - min(site_data),
-                   #  np.std(site_data), cp(site_data, minimum, maximum), cpk(site_data, minimum, maximum)]
+def site_array(site_data, minimum, maximum, site_number, units):
 
+    # Big boi initialization
+    site_results = []
+
+    # Not actually volts, it's actually % if it's db technically but who cares
+    volt_data = []
+
+    # The struggles of logarithmic data
+    if units.lower() == 'db':
+
+        for i in range(0, len(site_data)):
+            volt_data.append(db2v(site_data[i]))
+
+        mean_result = v2db(np.mean(volt_data))
+        standard_deviation = np.std(volt_data)*100  # *100 for converting to %
+        cp_result = cp(volt_data, db2v(minimum), db2v(maximum))
+        cpk_result = cpk(volt_data, db2v(minimum), db2v(maximum))
+
+    # Yummy linear data instead
+    else:
+        mean_result = np.mean(site_data)
+        standard_deviation = np.std(site_data)
+        cp_result = cp(site_data, minimum, maximum)
+        cpk_result = cpk(site_data, minimum, maximum)
+
+    # Appending all the important results weow!
     site_results.append(str(site_number))
     site_results.append(str(len(site_data)))
     site_results.append(str(calculate_fails(site_data, minimum, maximum)))
     site_results.append(str(Decimal(min(site_data)).quantize(Decimal('0.001'))))
-    site_results.append(str(Decimal(np.mean(site_data)).quantize(Decimal('0.001'))))
+    site_results.append(str(Decimal(mean_result).quantize(Decimal('0.001'))))
     site_results.append(str(Decimal(max(site_data)).quantize(Decimal('0.001'))))
     site_results.append(str(Decimal(max(site_data) - min(site_data)).quantize(Decimal('0.001'))))
-    site_results.append(str(Decimal(np.std(site_data)).quantize(Decimal('0.001'))))
-    site_results.append(str(Decimal(cp(site_data, minimum, maximum)).quantize(Decimal('0.001'))))
-    site_results.append(str(Decimal(cpk(site_data, minimum, maximum)).quantize(Decimal('0.001'))))
-
-
-
+    site_results.append(str('%.3E' % (Decimal(standard_deviation))))
+    site_results.append(str(Decimal(cp_result).quantize(Decimal('0.001'))))
+    site_results.append(str(Decimal(cpk_result).quantize(Decimal('0.001'))))
 
     return site_results
+
+
+# Converts volts to decibels
+def v2db(v):
+    return 20*np.log10(abs(v))
+
+# Converts decibels to volts
+def db2v(db):
+    return 10 ** (db / 20)
 
 
 # Counts the number of fails in a data set
@@ -604,17 +581,13 @@ def toExcel(filename):
 # CP AND CPK FUNCTIONS
 # Credit to: countrymarmot on github gist:  https://gist.github.com/countrymarmot/8413981
 def cp(site_data, minimum, maximum):
-    arr = np.array(site_data)
-    arr = arr.ravel()
-    sigma = np.std(arr)
+    sigma = np.std(site_data)
     Cp = float(maximum - minimum) / (6*sigma)
     return Cp
 
 def cpk(site_data, minimum, maximum):
-    arr = np.array(site_data)
-    arr = arr.ravel()
-    sigma = np.std(arr)
-    m = np.mean(arr)
+    sigma = np.std(site_data)
+    m = np.mean(site_data)
     Cpu = float(maximum - m) / (3*sigma)
     Cpl = float(m - minimum) / (3*sigma)
     Cpk = np.min([Cpu, Cpl])
