@@ -11,6 +11,7 @@
 # numpy                                           #
 # matplotlib                                      #
 # countrymarmot (cp + cpk)                        #
+# PyPDF2                                          #
 # My crying soul because there's no documentation #
 ###################################################
 
@@ -75,6 +76,7 @@ from decimal import Decimal
 import pandas as pd
 
 from matplotlib.backends.backend_pdf import PdfPages
+
 try:
     from PyPDF2 import PdfFileReader, PdfFileWriter, PdfFileMerger
 except ImportError:
@@ -241,7 +243,7 @@ def main():
 
         # Select if you want to do every test or just one individually
         while not selected:
-            choosing = input('Select Test (Otherwise Run on All)? (Y/N): ')
+            choosing = input('Select test? (otherwise run on all tests) (y/n): ')
             print()
             if choosing.lower() == 'y' or choosing.lower() == 'yes':
                 selecting = True
@@ -324,7 +326,7 @@ def main():
     # plots all of the tests under the selected test number
     plot_list_of_tests(all_test, ptr_data, number_of_sites, selected_test_all, filepath)
 
-    # ;;;;; END OF MAIN FUNCTION ;;;;; #
+    # ~~~~~ END OF MAIN FUNCTION ~~~~~ #
 
 ###################################################
 
@@ -335,15 +337,63 @@ def main():
 
 # IMPORTANT DOCUMENTATION I NEED TO FILL OUT TO MAKE SURE PEOPLE KNOW WHAT THE HELL IS GOING ON
 
-# ~~~~~~~~~~ Structure naming explanation (in functions) ~~~~~~~~~~ #
+# ~~~~~~~~~~ Data definition explanations (in functions) ~~~~~~~~~~ #
 # data --> ptr_data                                                 #
 #   gathered in main()                                              #
 #                                                                   #
-# test_list_data --> List of ['test_number', 'test_name']           #
+# test_tuple --> ['test_number', 'test_name']                       #
+#   Structure for associating a test's name with its test number    #
+#                                                                   #
+# test_list --> List of test_tuple                                  #
 #   find_test_of_number() returns this                              #
 #   list_of_test_numbers in main() is the complete list of this     #
 #                                                                   #
-
+# num_of_sites --> number of testing sites for each test run        #
+#   number_of_sites = int(sdr_parse[3]) in main()                   #
+#                                                                   #
+# test_list_data --> list of sets of site_data                      #
+#   (sorted in the same order as corresponding tests in test_list)  #
+#                                                                   #
+# site_data --> array of float data points number_of_sites long     #
+#   raw data for a single corresponding test_tuple                  #
+#                                                                   #
+# test_list and test_list_data are the same length                  #
+#                                                                   #
+# minimum, maximum --> floats                                       #
+#   lower and upper extremes for a site_data from a corresponding   #
+#       test_tuple. These are found in the ptr_data (data), which   #
+#       has the values located in one of the columns for the first  #
+#       test site in the first data point in a test.                #
+#   returned by get_plot_extremes() abstraction                     #
+# units --> string                                                  #
+#   Gathered virtually identically to minimum and maximum.          #
+#       Represents units for plotting and post calculations on      #
+#       data sets.                                                  #
+#                                                                   #
+# ~~~~~~~~~~~~ Parsed text file structure explanation ~~~~~~~~~~~~~ #
+# The PySTDF library parses the data really non-intuitively,        #
+#   although it can be viewed somewhat more clearly if you use the  #
+#   toExcel() function (I recommend doing this for figuring out the #
+#   way the file is formatted). Basically, each '|' separates the   #
+#   information in columns, and the first column determines the     #
+#   "page" you are dealing with. The only ones I found particularly #
+#   useful were SDR (for the number of sites) and PTR (where all    #
+#   the data is actually contained).                                #
+# The way the PTR data is parsed is very non-intuitive still, with  #
+#   the data broken into chunks num_of_sites lines long, meaning    #
+#   each chunk of num_of_sites lines contain a corresponding        #
+#   test_tuple that can be extracted, as well as a data point       #
+#   result for each test site. This is then done for every single   #
+#   test_tuple combination. After all that is done, the process is  #
+#   repeated for every single run of the test, creating a new data  #
+#   point for each site in each test tuple for however many numbers #
+#   of tests there are.                                             #
+# It's very not obvious at first, so I strongly recommend creating  #
+#   an excel file first to look at it yourself and reverse-engineer #
+#   it like I did if you really want to try and figure out the file #
+#   format yourself. I'm sorry the library sucks but I didn't       #
+#   design it :/ . Good luck!                                       #
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 
 # Given a set of data for each test, the full set of ptr data, the number of sites, and the list of names/tests for the
@@ -356,14 +406,14 @@ def plot_list_of_tests(test_list_data, data, num_of_sites, test_list, directory)
 
     for i in range(0, len(test_list)):
 
-        pdfTemp = PdfPages(str(directory + "_results_temp.pdf"))
+        pdfTemp = PdfPages(str(directory + "_results_temp"))
 
         plt.figure(figsize=(11, 8.5))
         pdfTemp.savefig(plot_everything_from_one_test(test_list_data[i], data, num_of_sites, test_list[i]))
 
         pdfTemp.close()
 
-        pp.append(PdfFileReader(str(directory + "_results_temp.pdf"), "rb"))
+        pp.append(PdfFileReader(str(directory + "_results_temp"), "rb"))
 
         if i % 10 == 0:
             print(str(i) + "/" + str(len(test_list)) + " test results completed")
@@ -371,9 +421,22 @@ def plot_list_of_tests(test_list_data, data, num_of_sites, test_list, directory)
         plt.close()
 
     print(str(len(test_list)) + "/" + str(len(test_list)) + " test results completed")
+    print()
 
-    os.remove(str(directory + "_results_temp.pdf"))
-    pp.write(str(directory + "_results.pdf"))
+    os.remove(str(directory + "_results_temp"))
+
+    # Makes sure that the pdf isn't open and prompts you to close it if it is
+    written = False
+    while not written:
+        try:
+            pp.write(str(directory + "_results.pdf"))
+            print('PDF written successfully!')
+            written = True
+
+        except PermissionError:
+            print(str('Please close ' + str(directory + "_results.pdf") + ' and try again.'))
+            input('Press <Enter> to continue...')
+            print()
 
 
 # Plots the results of everything from one test
@@ -431,26 +494,26 @@ def find_tests_of_number(test_number, test_list):
 
 
 # Returns the lower allowed limit of a set of data
-def get_plot_min(data, desired_test, num_of_sites):
-    return get_plot_extremes(data, desired_test, num_of_sites)[0]
+def get_plot_min(data, test_tuple, num_of_sites):
+    return get_plot_extremes(data, test_tuple, num_of_sites)[0]
 
 # Returns the upper allowed limit of a set of data
-def get_plot_max(data, desired_test, num_of_sites):
-    return get_plot_extremes(data, desired_test, num_of_sites)[1]
+def get_plot_max(data, test_tuple, num_of_sites):
+    return get_plot_extremes(data, test_tuple, num_of_sites)[1]
 
 # Returns the units for a set of data
-def get_units(data, desired_test, num_of_sites):
-    return get_plot_extremes(data, desired_test, num_of_sites)[2]
+def get_units(data, test_tuple, num_of_sites):
+    return get_plot_extremes(data, test_tuple, num_of_sites)[2]
 
 # Abstraction of above 3 functions, returns tuple with min and max
-def get_plot_extremes(data, desired_test, num_of_sites):
+def get_plot_extremes(data, test_tuple, num_of_sites):
     minimum_test = 0
     maximum_test = 1
     units = ''
     temp = 0
     not_found = True
     while not_found:
-        if data[temp].split("|")[1] == desired_test[0]:
+        if data[temp].split("|")[1] == test_tuple[0]:
             minimum_test = float(data[temp].split("|")[13])
             maximum_test = float(data[temp].split("|")[14])
             units = (data[temp].split("|")[15])
@@ -472,7 +535,6 @@ def plot_full_test_trend(test_data, minimum, maximum):
 
     # My feeble attempt to get pretty dynamic limits
     expand = max([abs(minimum), abs(maximum)])
-
     if minimum == maximum:
         plt.ylim(ymin=-0.05)
         plt.ylim(ymax=1.05)
