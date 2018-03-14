@@ -60,7 +60,7 @@
 # Importing a bunch of stuff that I probably won't even need but we'll just roll with it for now. I actually don't even
 # know what libraries here I actually am using at the moment so that's fun.
 
-from __future__ import print_function
+# from __future__ import print_function
 
 import os
 import sys
@@ -76,11 +76,7 @@ from decimal import Decimal
 import pandas as pd
 
 from matplotlib.backends.backend_pdf import PdfPages
-
-try:
-    from PyPDF2 import PdfFileReader, PdfFileWriter, PdfFileMerger
-except ImportError:
-    from pyPdf import PdfFileReader, PdfFileWriter, PdfFileMerger
+from PyPDF2 import PdfFileMerger, PdfFileReader
 
 try:
     import gzip
@@ -93,6 +89,9 @@ try:
     have_bz2 = True
 except ImportError:
     have_bz2 = False
+
+import tkinter
+import tkinter.filedialog
 
 gzPattern = re.compile('\.g?z', re.I)
 bz2Pattern = re.compile('\.bz2', re.I)
