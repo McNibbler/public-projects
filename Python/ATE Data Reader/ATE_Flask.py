@@ -79,6 +79,7 @@ import os
 import sys
 
 from flask import Flask, render_template
+from flask_sqlalchemy import SQLAlchemy
 
 from pystdf.IO import *
 from pystdf.Writers import *
