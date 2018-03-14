@@ -2,7 +2,7 @@
 # ATE STDF Data Reader Python Edition             #
 # Version: Beta 0.7                               #
 #                                                 #
-# March 12, 2018                                  #
+# March 14, 2018                                  #
 # Thomas Kaunzinger                               #
 # LTX-Credence / XCerra Corp.                     #
 #                                                 #
