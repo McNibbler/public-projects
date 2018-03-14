@@ -1,6 +1,6 @@
 ###################################################
 # ATE STDF Data Reader Python Edition             #
-# Version 0.6                                     #
+# Version: Beta 0.7                               #
 #                                                 #
 # March 12, 2018                                  #
 # Thomas Kaunzinger                               #
@@ -15,7 +15,7 @@
 ###################################################
 
 ########################################################################################################################
-# The purpose of this program is to attempt to make sense of Teradyne's de-facto-standard fie format: the              #
+# The purpose of this program is to attempt to make sense of Teradyne's de-facto standard fie format: the              #
 # Standard Test Data Format (STDF). This proprietary file format consists of non-trivially parsed and encoded          #
 # binary data and is the most commonly used format of data produced by Automatic Test Equipment (ATE), used by         #
 # companies like LTX-Credence and Teradyne. This program will be using the obscure but very helpful PySTDF library     #
@@ -38,14 +38,16 @@
 ########################################################################################################################
 
 ########################################################################################################################
-# NOTE: Do not run this program on data with the a file of the same name, but with "_parsed.txt" or "_excel.xlsx"      #
-# appended to the end; e.g. running this on "data.std" with a file called "data.std_parsed.txt" in the same folder is  #
-# a bad idea, as it will be overwritten, due to the fact that this program creates and writes to a text file of that   #
-# naming convention. But for real, why would you even do that in the first place?                                      #
+# NOTE: Do not run this program on data with the a file of the same name, but with "_parsed.txt" or "_excel.xlsx" or   #
+# "_results.pdf" appended to the end; e.g. running this on "data.std" with a file called "data.std_parsed.txt" in the  #
+# same folder is a bad idea, as it will be overwritten, due to the fact that this program creates and writes to a text #
+# file of that naming convention. But for real, why would you even do that in the first place?                         #
 ########################################################################################################################
 
 ########################################################################################################################
 # License: none yet lol. Do what you want with it for now, just credit me, let me know, and buy me food some time :)   #
+# Product of LTX-Credence of Xcerra Corporation. Program designed by Thomas Kaunzinger. Please contact for any         #
+# questions regarding use.                                                                                             #
 ########################################################################################################################
 
 ###################################################
@@ -62,11 +64,21 @@ from __future__ import print_function
 import os
 import sys
 
-from matplotlib.backends.backend_pdf import PdfPages
 from pystdf.IO import *
 from pystdf.Writers import *
+import pystdf.V4 as V4
+from pystdf.Importer import STDF2DataFrame
 
-sys.path.append("/pystdf-master")
+import numpy as np
+import matplotlib.pyplot as plt
+from decimal import Decimal
+import pandas as pd
+
+from matplotlib.backends.backend_pdf import PdfPages
+try:
+    from PyPDF2 import PdfFileReader, PdfFileWriter, PdfFileMerger
+except ImportError:
+    from pyPdf import PdfFileReader, PdfFileWriter, PdfFileMerger
 
 try:
     import gzip
@@ -80,21 +92,8 @@ try:
 except ImportError:
     have_bz2 = False
 
-import pandas as pd
-import pystdf.V4 as V4
-from pystdf.Importer import STDF2DataFrame
-
 gzPattern = re.compile('\.g?z', re.I)
 bz2Pattern = re.compile('\.bz2', re.I)
-
-import numpy as np
-import matplotlib.pyplot as plt
-from decimal import Decimal
-
-try:
-    from PyPDF2 import PdfFileReader, PdfFileWriter, PdfFileMerger
-except ImportError:
-    from pyPdf import PdfFileReader, PdfFileWriter, PdfFileMerger
 
 ###################################################
 
@@ -102,20 +101,50 @@ except ImportError:
 # FILE SELECTION #
 ##################
 
+# Mostly for debugging. Select this if you actually want user input in the program. Otherwise hard-code the variables
+# yourself below.
 user_input = True
 
 # I'll use this later so that the user can select a file to input and also so that they can select a test they want to
 # look at individually
 if user_input:
-    filepath = input('Select file location: ')
-    print()
 
-    wd = os.path.dirname(os.path.abspath(__file__))
+    file_selected = False
+    while not file_selected:
+        filepath = input('Select file location: ')
+        print()
 
-    filepath = os.path.join(wd, filepath)
+        wd = os.path.dirname(os.path.abspath(__file__))
+        filepath = os.path.join(wd, filepath)
 
-    print('Your filepath is located at: ' + filepath)
-    print()
+        # Checks validity of file selection
+        if not filepath.lower().endswith(('.std', '.stdf')):
+            print("Please select a file ending in '.std' or '.stdf'")
+            print()
+
+        elif not os.path.isfile(filepath):
+            print("Please select a filepath that exists")
+            print()
+
+        else:
+            file_selected = True
+
+
+    # Asks if you wish to create a new parsed file
+    parse_selected = False
+    parse_chosen_yet = False
+    while not parse_chosen_yet:
+        parse_input = input('Create parsed text file now? (do this if you have not before with this STDF) (y/n): ')
+        print()
+        if parse_input.lower() == 'y' or parse_input.lower() == 'yes':
+            parse_selected = True
+            parse_chosen_yet = True
+        elif parse_input.lower() == 'n' or parse_input.lower() == 'no':
+            parse_selected = False
+            parse_chosen_yet = True
+        else:
+            print('Please select yes or no')
+            print()
 
 else:
     # Chose where the STDF file is located. I'll add some pretty-ness to this at some point
@@ -124,6 +153,8 @@ else:
     filepath = os.path.join(wd, "Data\\data.std")
 
     print('Your filepath is located at: ' + filepath)
+
+    parse_selected = False
 
 
 ###################################################
@@ -136,15 +167,24 @@ else:
 def main():
 
     # Parses that big boi into a text file
-    process_file(filepath)
+    if parse_selected:
+        process_file(filepath)
 
     # This one is way too slow. Use with caution. Very good for visualizing how the parsed text file is organized.
     # toExcel(filepath)
 
     # Finds and opens the recently created parsed text file
     parsedDataFile = str(filepath + "_parsed.txt")
-    data = open(parsedDataFile).read().splitlines()
 
+    # Checks if you actually have parsed data
+    if not os.path.isfile(parsedDataFile):
+        print("Please try again and select yes to parse data")
+        print()
+        input("Press <Enter> to close...")
+        sys.exit()
+
+    # Reads raw data from parsed text file
+    data = open(parsedDataFile).read().splitlines()
 
     # Separates the different types of data from the text file into their own sets. Here, I am initializing the arrays.
     far_data, mir_data, sdr_data, pmr_data, pgr_data, pir_data, ptr_data, prr_data, tsr_data, hbr_data, sbr_data, pcr_data, mrr_data = [], [], [], [], [], [], [], [], [], [], [], [], []
@@ -179,13 +219,11 @@ def main():
         elif data[i].startswith("MRR"):
             mrr_data.append(data[i])
 
-
     # finds the number of lines per test, one line for each site being tested
     sdr_parse = sdr_data[0].split("|")
     number_of_sites = int(sdr_parse[3])
     print('Number of testing sites per test: ' + str(number_of_sites))
     print()
-
 
     # Gathers a list of the test numbers and the tests ran for each site, avoiding repeats from rerun tests
     list_of_test_numbers = []
@@ -195,12 +233,13 @@ def main():
         else:
             list_of_test_numbers.append([ptr_data[i].split("|")[1], ptr_data[i].split("|")[7]])
 
-
     # Juicy user input weow!!!
     if user_input:
+
         selected = False
         selecting = False
 
+        # Select if you want to do every test or just one individually
         while not selected:
             choosing = input('Select Test (Otherwise Run on All)? (Y/N): ')
             print()
@@ -211,36 +250,55 @@ def main():
                 selecting = False
                 selected = True
             else:
-                print('Please select yes or no ')
+                print('Please select yes or no')
                 print()
 
-        if not selecting:
-            selected_test_all = list_of_test_numbers
-
-        else:
+        # Select what you would want instead
+        if selecting:
             picked = False
 
+            # Creates a list of just the test numbers to check for valid inputs
+            list_of_just_numbers = []
+            for i in range(0, len(list_of_test_numbers)):
+                if list_of_test_numbers[i][0] in list_of_just_numbers:
+                    pass
+                else:
+                    list_of_just_numbers.append(list_of_test_numbers[i][0])
+
+            # Selecting a test to run the script on
             while not picked:
                 test_selection = input('Input a test number you wish to observe (type "show" to show options): ')
                 print()
 
+                # Displays valid tests
                 if test_selection.lower() == 'show':
 
                     for i in range(0, len(list_of_test_numbers)):
                         print(list_of_test_numbers[i])
 
                     print()
-                    print("['Test Number', 'Test Description']")
+                    print("Format: ['Test Number', 'Test Description']")
+                    print("Note: some test numbers contain multiple relevant tests. Each will have their own page.")
                     print()
 
+                # Checks validity
+                elif test_selection not in list_of_just_numbers:
+                    print("Please choose a valid test number.")
+                    print()
+
+                # Chooses the test
                 else:
                     selected_test_all = find_tests_of_number(test_selection, list_of_test_numbers)
                     picked = True
 
+        # All tests (if not selecting any individual test)
+        else:
+            selected_test_all = list_of_test_numbers
 
+    # Automatic stuff if there's no user inputs
     else:
         # Selects a test number + name combination for a given index
-        test_index = 100  # arbitrary at the moment
+        test_index = 100  # Totally arbitrary
         selected_test = [ptr_data[number_of_sites * test_index].split("|")[1],
                          ptr_data[number_of_sites * test_index].split("|")[7]]
         print('Selected test: ' + str(selected_test))
@@ -251,13 +309,10 @@ def main():
         selected_test_all = find_tests_of_number(selected_test[0], list_of_test_numbers)
 
 
-
     # Extracts the PTR data for the selected test number
     all_ptr_test = []
     for i in range(0, len(selected_test_all)):
         all_ptr_test.append(ptr_extractor(number_of_sites, ptr_data, selected_test_all[i]))
-
-
 
 
     # Gathers each set of data from all runs for each site in all selected tests
@@ -266,15 +321,10 @@ def main():
         all_test.append(single_test_data(number_of_sites, all_ptr_test[i]))
 
 
-
     # plots all of the tests under the selected test number
     plot_list_of_tests(all_test, ptr_data, number_of_sites, selected_test_all, filepath)
 
-    # lower_limit = get_plot_min(ptr_data, selected_test, number_of_sites)
-    # upper_limit = get_plot_max(ptr_data, selected_test, number_of_sites)
-
-
-
+    # ;;;;; END OF MAIN FUNCTION ;;;;; #
 
 ###################################################
 
@@ -740,3 +790,5 @@ def toExcel(filename):
 # If you made it this far, sorry for my passive-aggressive commenting and thanks for sticking through it all.
 if __name__ == "__main__":
     main()
+    print()
+    input("Press <Enter> to close...")
