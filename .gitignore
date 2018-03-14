@@ -18,6 +18,8 @@
 *.txt
 /R/ATE Data Reader/Data/*
 /Python/ATE Data Reader/Data/*
+/Python/ATE Data Reader/__pycache__/*
+/Python/ATE Data Reader/build/*
 
 # Temp Files
 *~
