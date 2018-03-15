@@ -90,7 +90,7 @@ try:
 except ImportError:
     have_bz2 = False
 
-import tkinter
+import tkinter as tk
 import tkinter.filedialog
 
 gzPattern = re.compile('\.g?z', re.I)
@@ -98,64 +98,16 @@ bz2Pattern = re.compile('\.bz2', re.I)
 
 ###################################################
 
-##################
-# FILE SELECTION #
-##################
+##############################
+# PROGRAM EXECUTION BOOLEANS #
+##############################
 
-# Mostly for debugging. Select this if you actually want user input in the program. Otherwise hard-code the variables
-# yourself below.
-user_input = True
-
-# I'll use this later so that the user can select a file to input and also so that they can select a test they want to
-# look at individually
-if user_input:
-
-    file_selected = False
-    while not file_selected:
-        filepath = input('Select file location: ')
-        print()
-
-        wd = os.path.dirname(os.path.abspath(__file__))
-        filepath = os.path.join(wd, filepath)
-
-        # Checks validity of file selection
-        if not filepath.lower().endswith(('.std', '.stdf')):
-            print("Please select a file ending in '.std' or '.stdf'")
-            print()
-
-        elif not os.path.isfile(filepath):
-            print("Please select a filepath that exists")
-            print()
-
-        else:
-            file_selected = True
-
-
-    # Asks if you wish to create a new parsed file
-    parse_selected = False
-    parse_chosen_yet = False
-    while not parse_chosen_yet:
-        parse_input = input('Create parsed text file now? (do this if you have not before with this STDF) (y/n): ')
-        print()
-        if parse_input.lower() == 'y' or parse_input.lower() == 'yes':
-            parse_selected = True
-            parse_chosen_yet = True
-        elif parse_input.lower() == 'n' or parse_input.lower() == 'no':
-            parse_selected = False
-            parse_chosen_yet = True
-        else:
-            print('Please select yes or no')
-            print()
-
-else:
-    # Chose where the STDF file is located. I'll add some pretty-ness to this at some point
-    wd = os.path.dirname(os.path.abspath(__file__))
-
-    filepath = os.path.join(wd, "Data\\data.std")
-
-    print('Your filepath is located at: ' + filepath)
-
-    parse_selected = False
+# Selects what form of execution you want for the program
+# if gui_input is true, the program will use the GUI I am attempting to build (unfinished)
+# if gui_input is false and cmd_input is true, the program will use the command-line interface (stable and functional)
+# if both are false, then it defaults to the hard-coded configuration that I just made for testing quickly (bad idea)
+gui_input = False
+cmd_input = True
 
 
 ###################################################
@@ -167,6 +119,88 @@ else:
 # Defining the main method
 def main():
 
+    parse_selected = False
+
+    # GUI functionality (NOT ACTUALLY IMPLEMENTED YET)
+    if gui_input:
+
+        # How do I interface design
+        fg = "#f24f4f"
+        bg = "#7cd2ff"   # "#01a5fa"
+        box = "#d6d8db"
+        font = "Raleway"
+
+        root = tk.Tk()
+        root.config(bg=bg)
+        root.option_add("*font", font)
+
+        title_frame = tk.Frame(root)
+        title_frame.pack()
+        title_text = tk.Label(root, text="ATE STDF Analyzer")
+        title_text.config(font="Raleway 30 bold", fg=fg, bg=bg)
+        title_text.pack()
+
+        upload_frame = tk.Frame(root)
+        upload_frame.pack()
+
+        upload_button = tk.Button(upload_frame, text="Upload STD/STDF", bg=box, fg=fg)
+        upload_button.pack()
+
+        root.mainloop()
+
+    # Command-line interface for file selection
+    elif cmd_input:
+
+        file_selected = False
+        while not file_selected:
+            filepath = input('Select file location: ')
+            print()
+
+            wd = os.path.dirname(os.path.abspath(__file__))
+            filepath = os.path.join(wd, filepath)
+
+            # Checks validity of file selection
+            if not filepath.lower().endswith(('.std', '.stdf')):
+                print("Please select a file ending in '.std' or '.stdf'")
+                print()
+
+            elif not os.path.isfile(filepath):
+                print("Please select a filepath that exists")
+                print()
+
+            else:
+                file_selected = True
+
+        # Asks if you wish to create a new parsed file
+        parse_selected = False
+        parse_chosen_yet = False
+        while not parse_chosen_yet:
+            parse_input = input('Create parsed text file now? (do this if you have not before with this STDF) (y/n): ')
+            print()
+            if parse_input.lower() == 'y' or parse_input.lower() == 'yes':
+                parse_selected = True
+                parse_chosen_yet = True
+            elif parse_input.lower() == 'n' or parse_input.lower() == 'no':
+                parse_selected = False
+                parse_chosen_yet = True
+            else:
+                print('Please select yes or no')
+                print()
+
+    # Fast hard-coded testing code if both are false
+    else:
+        # Chose where the STDF file is located. I'll add some pretty-ness to this at some point
+        wd = os.path.dirname(os.path.abspath(__file__))
+
+        filepath = os.path.join(wd, "Data\\data.std")
+
+        print('Your filepath is located at: ' + filepath)
+
+        parse_selected = False
+
+
+
+
     # Parses that big boi into a text file
     if parse_selected:
 
@@ -176,6 +210,7 @@ def main():
             try:
                 process_file(filepath)
                 print('STDF parsed successfully!')
+                print()
                 written = True
 
             except PermissionError:
@@ -249,7 +284,7 @@ def main():
     selected_test_all = []
 
     # Juicy user input weow!!!
-    if user_input:
+    if cmd_input:
 
         selected = False
         selecting = False
@@ -390,6 +425,7 @@ def main():
             try:
                 table.to_csv(path_or_buf=str(filepath + "_summary.csv"))
                 print('CSV summary written successfully!')
+                print()
                 written = True
 
             except PermissionError:

@@ -21,6 +21,7 @@
 /Python/ATE Data Reader/Data/*
 /Python/ATE Data Reader/__pycache__/*
 /Python/ATE Data Reader/build/*
+/Python/ATE Data Reader/hide_things_here/*
 
 # Temp Files
 *~
