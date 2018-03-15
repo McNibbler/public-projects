@@ -1,6 +1,6 @@
 ###################################################
 # ATE STDF Data Reader Python Edition             #
-# Version: Beta 0.7                               #
+# Version: Beta 0.8                               #
 #                                                 #
 # March 14, 2018                                  #
 # Thomas Kaunzinger                               #
@@ -234,6 +234,8 @@ def main():
         else:
             list_of_test_numbers.append([ptr_data[i].split("|")[1], ptr_data[i].split("|")[7]])
 
+    selected_test_all = []
+
     # Juicy user input weow!!!
     if user_input:
 
@@ -296,6 +298,44 @@ def main():
         else:
             selected_test_all = list_of_test_numbers
 
+
+        # Selecting the desired results generated from the test
+
+        # Choose to create results spreadsheet
+        chosen = False
+        summary = False
+        while not chosen:
+            spreadsheet_selection = input('Generate spreadsheet summary of all tests? (y/n): ')
+            print()
+
+            if spreadsheet_selection.lower() == 'y' or spreadsheet_selection.lower() == 'yes':
+                summary = True
+                chosen = True
+            elif spreadsheet_selection.lower() == 'n' or spreadsheet_selection.lower() == 'no':
+                summary = False
+                chosen = True
+            else:
+                print('Please select yes or no')
+                print()
+
+        # Choose to render the pdf
+        pdf_render = False
+        chosen = False
+        while not chosen:
+            pdf_selection = input('Render detailed PDF results of all tests (slow if lots of data selected)? (y/n): ')
+            print()
+
+            if pdf_selection.lower() == 'y' or pdf_selection.lower() == 'yes':
+                pdf_render = True
+                chosen = True
+            elif pdf_selection.lower() == 'n' or pdf_selection.lower() == 'no':
+                pdf_render = False
+                chosen = True
+            else:
+                print('Please select yes or no')
+                print()
+
+
     # Automatic stuff if there's no user inputs
     else:
         # Selects a test number + name combination for a given index
@@ -308,6 +348,9 @@ def main():
         # Creates a list of tuples that contains the test number and name for all of the tests that have the same
         # number as selected_test
         selected_test_all = find_tests_of_number(selected_test[0], list_of_test_numbers)
+
+        pdf_render = True
+        summary = True
 
 
     # Extracts the PTR data for the selected test number
@@ -322,10 +365,20 @@ def main():
         all_test.append(single_test_data(number_of_sites, all_ptr_test[i]))
 
 
+    # ~~~~~ Execution of data processing functions ~~~~~ #
+
+    # creates a spreadsheet of the final data results
+    if summary:
+        table = get_summary_table(all_test, ptr_data, number_of_sites, selected_test_all)
+        table.to_csv(path_or_buf=str(filepath + "_summary.csv"))
+        print('.csv summary generated!')
+
     # plots all of the tests under the selected test number
-    plot_list_of_tests(all_test, ptr_data, number_of_sites, selected_test_all, filepath)
+    if pdf_render:
+        plot_list_of_tests(all_test, ptr_data, number_of_sites, selected_test_all, filepath)
 
     # ~~~~~ END OF MAIN FUNCTION ~~~~~ #
+
 
 ###################################################
 
@@ -540,6 +593,31 @@ def plot_full_test_trend(test_data, minimum, maximum):
     else:
         plt.ylim(ymin= minimum - abs(0.05 * expand))
         plt.ylim(ymax= maximum + abs(0.05 * expand))
+
+
+# Supposedly gets the summary results for all sites in each test
+def get_summary_table(test_list_data, data, num_of_sites, test_list):
+    parameters = ['Units', 'Runs', 'Fails', 'Min', 'Mean', 'Max', 'Range', 'STD', 'Cp', 'Cpl', 'Cpu', 'Cpk']
+
+    summary_results = []
+
+    for i in range(0, len(test_list_data)):
+
+        all_data_array = np.concatenate(test_list_data[i], axis=0)
+
+        units = get_units(data, test_list[i], num_of_sites)
+        minimum = get_plot_min(data, test_list[i], num_of_sites)
+        maximum = get_plot_max(data, test_list[i], num_of_sites)
+
+        summary_results.append(site_array(all_data_array, minimum, maximum, units, units))
+
+    test_names = []
+    for i in range(0, len(test_list)):
+        test_names.append(test_list[i][1])
+
+    table = pd.DataFrame(summary_results, columns=parameters, index=test_names)
+
+    return table
 
 
 # Returns the table of the results of all the tests to visualize the data
