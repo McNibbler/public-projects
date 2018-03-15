@@ -2,7 +2,7 @@
 # ATE STDF Data Reader Python Edition             #
 # Version: Beta 0.8                               #
 #                                                 #
-# March 14, 2018                                  #
+# March 15, 2018                                  #
 # Thomas Kaunzinger                               #
 # LTX-Credence / XCerra Corp.                     #
 #                                                 #
@@ -169,7 +169,19 @@ def main():
 
     # Parses that big boi into a text file
     if parse_selected:
-        process_file(filepath)
+
+        # Checks that the file isn't already open and in use
+        written = False
+        while not written:
+            try:
+                process_file(filepath)
+                print('STDF parsed successfully!')
+                written = True
+
+            except PermissionError:
+                print(str('Please close ' + str(filepath + "_parsed.txt") + ' and try again.'))
+                input('Press <Enter> to continue...')
+                print()
 
     # This one is way too slow. Use with caution. Very good for visualizing how the parsed text file is organized.
     # toExcel(filepath)
@@ -369,9 +381,21 @@ def main():
 
     # creates a spreadsheet of the final data results
     if summary:
+
         table = get_summary_table(all_test, ptr_data, number_of_sites, selected_test_all)
-        table.to_csv(path_or_buf=str(filepath + "_summary.csv"))
-        print('.csv summary generated!')
+
+        # In case someone has the file open
+        written = False
+        while not written:
+            try:
+                table.to_csv(path_or_buf=str(filepath + "_summary.csv"))
+                print('CSV summary written successfully!')
+                written = True
+
+            except PermissionError:
+                print(str('Please close ' + str(filepath + "_summary.csv") + ' and try again.'))
+                input('Press <Enter> to continue...')
+                print()
 
     # plots all of the tests under the selected test number
     if pdf_render:
