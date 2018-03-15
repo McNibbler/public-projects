@@ -90,7 +90,7 @@ try:
 except ImportError:
     have_bz2 = False
 
-import tkinter as tk
+from tkinter import *
 import tkinter.filedialog
 
 gzPattern = re.compile('\.g?z', re.I)
@@ -106,7 +106,7 @@ bz2Pattern = re.compile('\.bz2', re.I)
 # if gui_input is true, the program will use the GUI I am attempting to build (unfinished)
 # if gui_input is false and cmd_input is true, the program will use the command-line interface (stable and functional)
 # if both are false, then it defaults to the hard-coded configuration that I just made for testing quickly (bad idea)
-gui_input = False
+gui_input = True
 cmd_input = True
 
 
@@ -130,21 +130,33 @@ def main():
         box = "#d6d8db"
         font = "Raleway"
 
-        root = tk.Tk()
+        root = Tk()
         root.config(bg=bg)
         root.option_add("*font", font)
 
-        title_frame = tk.Frame(root)
-        title_frame.pack()
-        title_text = tk.Label(root, text="ATE STDF Analyzer")
+
+        # Title text frame
+        title_frame = Frame(root)
+        title_frame.grid(row=0, column=0, sticky=NW)
+        title_text = Label(title_frame, text="ATE STDF Analyzer")
         title_text.config(font="Raleway 30 bold", fg=fg, bg=bg)
         title_text.pack()
 
-        upload_frame = tk.Frame(root)
-        upload_frame.pack()
 
-        upload_button = tk.Button(upload_frame, text="Upload STD/STDF", bg=box, fg=fg)
-        upload_button.pack()
+        # Uploading frame
+        upload_frame = Frame(root)
+        upload_frame.config(bg=bg)
+        upload_frame.grid(row=1, column=0, sticky=NW)
+
+        upload_button = Button(upload_frame, text="Upload STD/STDF", bg=box, fg=fg)
+        upload_button.bind("<Button-1>", test)
+        upload_button.grid(row=0, column=0, sticky=W)
+
+        parse_button = Button(upload_frame, text="Parse STD/STDF to .txt", bg=box, fg=fg)
+        parse_button.grid(row=1, column=0, sticky=W)
+
+        file = tkinter.filedialog.askopenfile(parent=upload_frame, mode='rb', title='Choose a file')
+
 
         root.mainloop()
 
@@ -439,12 +451,26 @@ def main():
 
     # ~~~~~ END OF MAIN FUNCTION ~~~~~ #
 
+###################################################
+
+#####################
+# TKINTER FUNCTIONS #
+#####################
+
+# This is probably going to be a disaster lmfao
+def test(event):
+    print("test")
+
+def browse_for_file(event):
+    file =
+
+
 
 ###################################################
 
-#######################
-# IMPORTANT FUNCTIONS #
-#######################
+#####################
+# BACKEND FUNCTIONS #
+#####################
 
 
 # IMPORTANT DOCUMENTATION I NEED TO FILL OUT TO MAKE SURE PEOPLE KNOW WHAT THE HELL IS GOING ON
