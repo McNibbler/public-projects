@@ -16,6 +16,8 @@ from pystdf.Writers import *
 import pystdf.V4 as V4
 from pystdf.Importer import STDF2DataFrame
 
+from abc import ABC
+
 import numpy as np
 import matplotlib.pyplot as plt
 from decimal import Decimal
@@ -29,7 +31,7 @@ from PyPDF2 import PdfFileMerger, PdfFileReader
 
 # We're living that object oriented life now
 # Here's where I put my functions for reading files
-class FileReaders:
+class FileReaders(ABC):
 
     # processing that big boi
     @staticmethod
@@ -55,6 +57,7 @@ class FileReaders:
 
         # We don't need to keep that file open
         f.close()
+
 
     # Parses that big boi but this time in Excel format (slow, don't use unless you wish to look at how it's organized)
     @staticmethod
@@ -91,73 +94,69 @@ class Application(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.WINDOW_SIZE = (300, 200)
+        self.WINDOW_SIZE = (400, 180)
+        self.file_path = None
         self.main_window()
+
 
     # Main interface method
     def main_window(self):
 
-        # # Default UI elements
-        # WINDOW_SIZE = (300, 200)
-        # # FONT = 'Raleway'
-        # # FONT_SIZE = 12
-        #
-        #
-        # layout = QGridLayout()
-        # self.setLayout(layout)
-        #
-        # status_label = QLabel()
-        # status_label.setText('Hello!')
-        #
-        # layout.addWidget(status_label, 0, 0)
-        #
-        # upload_button = QPushButton('Parse STD/STDF to .txt', self)
-        # upload_button.setToolTip('Browse your files for a file ending in .std or .stdf to create a parsed .txt file to work with')
-        # upload_button.resize(upload_button.sizeHint())
-        # layout.addWidget(upload_button, 1, 0)
-        #
-        # upload_button.clicked.connect(self.open_parsing_dialog)
-        #
-        #
-        # if not self.nice == '':
-        #
-        #     FileReaders.process_file(self.file_path)
-        #     self.file_path = ''
-        #
-        #
-        # self.resize(WINDOW_SIZE[0], WINDOW_SIZE[1])
-        # self.center()
-        # self.setWindowTitle('ATE Data Reader')
-        # self.show()
-
+        # Layout
         layout = QGridLayout()
         self.setLayout(layout)
 
+        # Have to read the imported .txt file but I'm not totally sure how
         self.parsed_string = None
 
+        # the status_text label lets you know the current status of the actions you are performing
         self.status_text = QLabel()
-        self.stdf_upload_button = QPushButton('Parse STD/STDF to .txt')
-        self.txt_upload_button = QPushButton('Upload parsed .txt file')
-        self.generate_summary_button = QPushButton('Generate summary of all results')
+        self.status_text.setText('Welcome!')
 
+        # Button to parse to .txt
+        self.stdf_upload_button = QPushButton('Parse STD/STDF to .txt')
+        self.stdf_upload_button.setToolTip('Browse for a file ending in .std or .stdf to create a parsed .txt file')
+        self.stdf_upload_button.clicked.connect(self.open_parsing_dialog)
+
+        # Button to parse to .xlsx
+        self.stdf_upload_button_xlsx = QPushButton('Parse to .xlsx (not recommended)')
+        self.stdf_upload_button_xlsx.setToolTip(
+            'Browse for stdf to create .xlsx file. This is slow and unnecessary, but good for seeing parsed structure.')
+        self.stdf_upload_button_xlsx.clicked.connect(self.open_parsing_dialog_xlsx)
+
+        # Button to upload the .txt file to work with
+        self.txt_upload_button = QPushButton('Upload parsed .txt file')
+        self.txt_upload_button.setToolTip('Browse for the .txt file containing the parsed STDF data')
+
+        # Generates a summary of the loaded text
+        self.generate_summary_button = QPushButton('Generate summary of all results')
+        self.generate_summary_button.setToolTip('Generate a results .csv summary for the uploaded parsed .txt')
+
+        # Selects a test result for the desired
         self.select_test_menu = QComboBox()
+        self.select_test_menu.setToolTip('Select the tests to produce the PDF results for')
         self.select_test_menu.addItems(self.get_list(self.parsed_string))
 
+        # Button to generate the test results for the desired tests from the selected menu
         self.generate_pdf_button = QPushButton('Generate .pdf from selected tests')
+        self.generate_pdf_button.setToolTip('Generate a .pdf file with the selected tests from the parsed .txt')
 
 
-
-        layout.addWidget(self.status_text, 0, 0)
+        # Adds the widgets together in the grid
+        layout.addWidget(self.status_text, 0, 0, 1, 2)
         layout.addWidget(self.stdf_upload_button, 1, 0)
-        layout.addWidget(self.txt_upload_button, 2, 0)
-        layout.addWidget(self.generate_summary_button, 3, 0)
+        layout.addWidget(self.stdf_upload_button_xlsx, 1, 1)
+        layout.addWidget(self.txt_upload_button, 2, 0, 1, 2)
+        layout.addWidget(self.generate_summary_button, 3, 0, 1, 2)
         layout.addWidget(self.select_test_menu, 4, 0)
-        layout.addWidget(self.generate_pdf_button, 5, 0)
+        layout.addWidget(self.generate_pdf_button, 4, 1)
 
-        self.resize(self.WINDOW_SIZE[0], self.WINDOW_SIZE[1])
+        # Window settings
+        self.setFixedSize(self.WINDOW_SIZE[0], self.WINDOW_SIZE[1])
         self.center()
         self.setWindowTitle('ATE Data Reader')
         self.show()
+
 
     # Centers the window
     def center(self):
@@ -166,19 +165,34 @@ class Application(QWidget):
         window.moveCenter(center_point)
         self.move(window.topLeft())
 
-    # Opens and reads a file to parse the data
 
+    # Opens and reads a file to parse the data
     def open_parsing_dialog(self):
+        self.status_text.setText('Parsing to .txt, please wait...')
+
         filterboi = 'STDF (*.stdf, *.std)'
         filepath = QFileDialog.getOpenFileName(caption='Open STDF File', filter=filterboi)
 
-        self.file_path = filepath[0]
+        FileReaders.process_file(filepath[0])
+        self.status_text.setText(str(filepath[0].split('/')[-1] + '_parsed.txt created!'))
 
+
+    # Opens and reads a file to parse the data to an xlsx
+    def open_parsing_dialog_xlsx(self):
+        self.status_text.setText('Parsing to .xlsx, please wait...')
+
+        filterboi = 'STDF (*.stdf, *.std)'
+        filepath = QFileDialog.getOpenFileName(caption='Open STDF File', filter=filterboi)
+
+        FileReaders.to_excel(filepath[0])
+        self.status_text.setText(str(filepath[0].split('/')[-1] + '_excel.xlsx created!'))
+
+
+    # Gets the list of tests from a parsed text file
     def get_list(self, string):
-
-        if string == None or string == '':
-
+        if string is None or string == '':
             return ['ALL TESTS']
+
 
 # Execute me
 if __name__ == '__main__':
