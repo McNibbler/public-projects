@@ -87,31 +87,74 @@ class FileReaders:
 # These are the functions for the widget application objects that run the whole interface
 class Application(QWidget):
 
-    # Initialize me dad
+    # Construct me
     def __init__(self):
         super().__init__()
 
+        self.WINDOW_SIZE = (300, 200)
         self.main_window()
 
     # Main interface method
     def main_window(self):
 
-        # Default UI elements
-        WINDOW_SIZE = (300, 200)
-        # FONT = 'Raleway'
-        # FONT_SIZE = 12
+        # # Default UI elements
+        # WINDOW_SIZE = (300, 200)
+        # # FONT = 'Raleway'
+        # # FONT_SIZE = 12
+        #
+        #
+        # layout = QGridLayout()
+        # self.setLayout(layout)
+        #
+        # status_label = QLabel()
+        # status_label.setText('Hello!')
+        #
+        # layout.addWidget(status_label, 0, 0)
+        #
+        # upload_button = QPushButton('Parse STD/STDF to .txt', self)
+        # upload_button.setToolTip('Browse your files for a file ending in .std or .stdf to create a parsed .txt file to work with')
+        # upload_button.resize(upload_button.sizeHint())
+        # layout.addWidget(upload_button, 1, 0)
+        #
+        # upload_button.clicked.connect(self.open_parsing_dialog)
+        #
+        #
+        # if not self.nice == '':
+        #
+        #     FileReaders.process_file(self.file_path)
+        #     self.file_path = ''
+        #
+        #
+        # self.resize(WINDOW_SIZE[0], WINDOW_SIZE[1])
+        # self.center()
+        # self.setWindowTitle('ATE Data Reader')
+        # self.show()
 
         layout = QGridLayout()
         self.setLayout(layout)
 
-        upload_button = QPushButton('Parse STD/STDF to .txt', self)
-        upload_button.setToolTip('Browse your files for a file ending in .std or .stdf to create a parsed .txt file to work with')
-        upload_button.resize(upload_button.sizeHint())
-        layout.addWidget(upload_button, 0, 0)
+        self.parsed_string = None
 
-        nice = upload_button.clicked.connect(self.open_parsing_dialog)
+        self.status_text = QLabel()
+        self.stdf_upload_button = QPushButton('Parse STD/STDF to .txt')
+        self.txt_upload_button = QPushButton('Upload parsed .txt file')
+        self.generate_summary_button = QPushButton('Generate summary of all results')
 
-        self.resize(WINDOW_SIZE[0], WINDOW_SIZE[1])
+        self.select_test_menu = QComboBox()
+        self.select_test_menu.addItems(self.get_list(self.parsed_string))
+
+        self.generate_pdf_button = QPushButton('Generate .pdf from selected tests')
+
+
+
+        layout.addWidget(self.status_text, 0, 0)
+        layout.addWidget(self.stdf_upload_button, 1, 0)
+        layout.addWidget(self.txt_upload_button, 2, 0)
+        layout.addWidget(self.generate_summary_button, 3, 0)
+        layout.addWidget(self.select_test_menu, 4, 0)
+        layout.addWidget(self.generate_pdf_button, 5, 0)
+
+        self.resize(self.WINDOW_SIZE[0], self.WINDOW_SIZE[1])
         self.center()
         self.setWindowTitle('ATE Data Reader')
         self.show()
@@ -124,12 +167,18 @@ class Application(QWidget):
         self.move(window.topLeft())
 
     # Opens and reads a file to parse the data
+
     def open_parsing_dialog(self):
         filterboi = 'STDF (*.stdf, *.std)'
         filepath = QFileDialog.getOpenFileName(caption='Open STDF File', filter=filterboi)
 
-        FileReaders.process_file(filepath[0])
+        self.file_path = filepath[0]
 
+    def get_list(self, string):
+
+        if string == None or string == '':
+
+            return ['ALL TESTS']
 
 # Execute me
 if __name__ == '__main__':
