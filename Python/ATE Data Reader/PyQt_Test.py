@@ -94,6 +94,9 @@ class Application(QWidget):
     def __init__(self):
         super().__init__()
 
+        # Have to read the imported .txt file but I'm not totally sure how
+        self.parsed_string = None
+
         self.WINDOW_SIZE = (400, 180)
         self.file_path = None
         self.main_window()
@@ -105,9 +108,6 @@ class Application(QWidget):
         # Layout
         layout = QGridLayout()
         self.setLayout(layout)
-
-        # Have to read the imported .txt file but I'm not totally sure how
-        self.parsed_string = None
 
         # the status_text label lets you know the current status of the actions you are performing
         self.status_text = QLabel()
@@ -127,6 +127,7 @@ class Application(QWidget):
         # Button to upload the .txt file to work with
         self.txt_upload_button = QPushButton('Upload parsed .txt file')
         self.txt_upload_button.setToolTip('Browse for the .txt file containing the parsed STDF data')
+        self.txt_upload_button.clicked.connect(self.open_text)
 
         # Generates a summary of the loaded text
         self.generate_summary_button = QPushButton('Generate summary of all results')
@@ -141,6 +142,17 @@ class Application(QWidget):
         self.generate_pdf_button = QPushButton('Generate .pdf from selected tests')
         self.generate_pdf_button.setToolTip('Generate a .pdf file with the selected tests from the parsed .txt')
 
+        text_file_location = self.file_path
+
+        if not self.file_path is None:
+
+            print('cool')
+
+            self.status_text.setText('Parsed .txt uploaded!')
+
+            self.file_path = None
+
+            self.main_window()
 
         # Adds the widgets together in the grid
         layout.addWidget(self.status_text, 0, 0, 1, 2)
@@ -186,6 +198,16 @@ class Application(QWidget):
 
         FileReaders.to_excel(filepath[0])
         self.status_text.setText(str(filepath[0].split('/')[-1] + '_excel.xlsx created!'))
+
+
+    # Opens and reads a file to parse the data
+    def open_text(self):
+
+        filterboi = 'Text (*.txt)'
+        filepath = QFileDialog.getOpenFileName(caption='Open .txt File', filter=filterboi)
+
+        self.file_path = filepath[0]
+        self.main_window()
 
 
     # Gets the list of tests from a parsed text file
