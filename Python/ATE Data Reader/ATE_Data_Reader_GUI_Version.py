@@ -95,21 +95,13 @@ class Application(QWidget):
         super().__init__()
 
         # Have to read the imported .txt file but I'm not totally sure how
-        self.parsed_string = None
+        self.data = None
+        self.far_data, self.mir_data, self.sdr_data, self.pmr_data, self.pgr_data, self.pir_data, self.ptr_data, self.prr_data, self.tsr_data, self.hbr_data, self.sbr_data, self.pcr_data, self.mrr_data = [], [], [], [], [], [], [], [], [], [], [], [], []
 
-        self.WINDOW_SIZE = (400, 180)
-        self.file_path = None
-        self.main_window()
+        self.number_of_sites = None
+        self.list_of_test_numbers = [['', 'ALL DATA']]
+        self.list_of_test_numbers_string = []
 
-
-    # Main interface method
-    def main_window(self):
-
-        # Layout
-        layout = QGridLayout()
-        self.setLayout(layout)
-
-        # the status_text label lets you know the current status of the actions you are performing
         self.status_text = QLabel()
         self.status_text.setText('Welcome!')
 
@@ -136,23 +128,30 @@ class Application(QWidget):
         # Selects a test result for the desired
         self.select_test_menu = QComboBox()
         self.select_test_menu.setToolTip('Select the tests to produce the PDF results for')
-        self.select_test_menu.addItems(self.get_list(self.parsed_string))
 
         # Button to generate the test results for the desired tests from the selected menu
         self.generate_pdf_button = QPushButton('Generate .pdf from selected tests')
         self.generate_pdf_button.setToolTip('Generate a .pdf file with the selected tests from the parsed .txt')
 
-        text_file_location = self.file_path
+        self.WINDOW_SIZE = (600, 180)
+        self.file_path = None
+        self.text_file_location = self.file_path
 
-        if not self.file_path is None:
+        self.setFixedSize(self.WINDOW_SIZE[0], self.WINDOW_SIZE[1])
+        self.center()
+        self.setWindowTitle('ATE Data Reader')
 
-            print('cool')
+        self.file_selected = False
 
-            self.status_text.setText('Parsed .txt uploaded!')
+        self.main_window()
 
-            self.file_path = None
 
-            self.main_window()
+    # Main interface method
+    def main_window(self):
+
+        # Layout
+        layout = QGridLayout()
+        self.setLayout(layout)
 
         # Adds the widgets together in the grid
         layout.addWidget(self.status_text, 0, 0, 1, 2)
@@ -164,9 +163,6 @@ class Application(QWidget):
         layout.addWidget(self.generate_pdf_button, 4, 1)
 
         # Window settings
-        self.setFixedSize(self.WINDOW_SIZE[0], self.WINDOW_SIZE[1])
-        self.center()
-        self.setWindowTitle('ATE Data Reader')
         self.show()
 
 
@@ -180,34 +176,120 @@ class Application(QWidget):
 
     # Opens and reads a file to parse the data
     def open_parsing_dialog(self):
-        self.status_text.setText('Parsing to .txt, please wait...')
 
-        filterboi = 'STDF (*.stdf, *.std)'
+        self.status_text.setText('Parsing to .txt, please wait...')
+        filterboi = 'STDF (*.stdf *.std)'
         filepath = QFileDialog.getOpenFileName(caption='Open STDF File', filter=filterboi)
 
-        FileReaders.process_file(filepath[0])
-        self.status_text.setText(str(filepath[0].split('/')[-1] + '_parsed.txt created!'))
+        if filepath[0] == '':
+
+            self.status_text.setText('Please select a file')
+            pass
+
+        else:
+
+            self.status_text.update()
+            FileReaders.process_file(filepath[0])
+            self.status_text.setText(str(filepath[0].split('/')[-1] + '_parsed.txt created!'))
 
 
     # Opens and reads a file to parse the data to an xlsx
     def open_parsing_dialog_xlsx(self):
-        self.status_text.setText('Parsing to .xlsx, please wait...')
 
-        filterboi = 'STDF (*.stdf, *.std)'
+        self.status_text.setText('Parsing to .xlsx, please wait...')
+        filterboi = 'STDF (*.stdf *.std)'
         filepath = QFileDialog.getOpenFileName(caption='Open STDF File', filter=filterboi)
 
-        FileReaders.to_excel(filepath[0])
-        self.status_text.setText(str(filepath[0].split('/')[-1] + '_excel.xlsx created!'))
+        if filepath[0] == '':
+
+            self.status_text.setText('Please select a file')
+            pass
+
+        else:
+
+            self.status_text.update()
+            FileReaders.to_excel(filepath[0])
+            self.status_text.setText(str(filepath[0].split('/')[-1] + '_excel.xlsx created!'))
 
 
     # Opens and reads a file to parse the data
     def open_text(self):
 
-        filterboi = 'Text (*.txt)'
-        filepath = QFileDialog.getOpenFileName(caption='Open .txt File', filter=filterboi)
+        if self.file_selected:
 
-        self.file_path = filepath[0]
-        self.main_window()
+            self.status_text.setText('Parsed .txt file already uploaded. Please restart program to upload another.')
+            pass
+
+        else:
+
+            filterboi = 'Text (*.txt)'
+            filepath = QFileDialog.getOpenFileName(caption='Open .txt File', filter=filterboi)
+
+            self.file_path = filepath[0]
+
+            if self.file_path is not '':
+
+                self.data = open(self.file_path).read().splitlines()
+
+                for i in range(0, len(self.data) - 1):
+                    if self.data[i].startswith("FAR"):
+                        self.far_data.append(self.data[i])
+                    elif self.data[i].startswith("MIR"):
+                        self.mir_data.append(self.data[i])
+                    elif self.data[i].startswith("SDR"):
+                        self.sdr_data.append(self.data[i])
+                    elif self.data[i].startswith("PMR"):
+                        self.pmr_data.append(self.data[i])
+                    elif self.data[i].startswith("PGR"):
+                        self.pgr_data.append(self.data[i])
+                    elif self.data[i].startswith("PIR"):
+                        self.pir_data.append(self.data[i])
+                    elif self.data[i].startswith("PTR"):
+                        self.ptr_data.append(self.data[i])
+                    elif self.data[i].startswith("PRR"):
+                        self.prr_data.append(self.data[i])
+                    elif self.data[i].startswith("TSR"):
+                        self.tsr_data.append(self.data[i])
+                    elif self.data[i].startswith("HBR"):
+                        self.hbr_data.append(self.data[i])
+                    elif self.data[i].startswith("SBR"):
+                        self.sbr_data.append(self.data[i])
+                    elif self.data[i].startswith("PCR"):
+                        self.pcr_data.append(self.data[i])
+                    elif self.data[i].startswith("MRR"):
+                        self.mrr_data.append(self.data[i])
+
+                sdr_parse = self.sdr_data[0].split("|")
+                self.number_of_sites = int(sdr_parse[3])
+
+
+                self.list_of_test_numbers = [['', 'ALL DATA']]
+                # Gathers a list of the test numbers and the tests ran for each site, avoiding repeats from rerun tests
+                for i in range(0, len(self.ptr_data), self.number_of_sites):
+                    if [self.ptr_data[i].split("|")[1], self.ptr_data[i].split("|")[7]] in self.list_of_test_numbers:
+                        pass
+                    else:
+                        self.list_of_test_numbers.append([self.ptr_data[i].split("|")[1], self.ptr_data[i].split("|")[7]])
+
+                self.list_of_test_numbers_string = []
+
+                for i in range(0, len(self.list_of_test_numbers)):
+
+                    self.list_of_test_numbers_string.append(str(self.list_of_test_numbers[i][1]))
+
+                self.file_selected = True
+
+                self.select_test_menu.addItems(self.list_of_test_numbers_string)
+
+                self.status_text.setText('Parsed .txt uploaded!')
+
+                self.main_window()
+
+            else:
+
+                self.status_text.setText('Please select a file')
+                pass
+
 
 
     # Gets the list of tests from a parsed text file
