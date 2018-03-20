@@ -276,11 +276,6 @@ class Application(QWidget):
             for i in range(len(all_ptr_test)):
                 all_test.append(Backend.single_test_data(self.number_of_sites, all_ptr_test[i]))
 
-
-            print(all_ptr_test[0:10])
-            print(all_test[0:10])
-            print(self.list_of_test_numbers[1: len(self.list_of_test_numbers)])
-
             table = Backend.get_summary_table(all_test, self.ptr_data, self.number_of_sites, self.list_of_test_numbers[1: len(self.list_of_test_numbers)])
 
             # In case someone has the file open
@@ -303,6 +298,7 @@ class Application(QWidget):
 #####################
 # BACKEND FUNCTIONS #
 #####################
+# COPIED FROM CMD ATE DATA READER
 
 
 # IMPORTANT DOCUMENTATION I NEED TO FILL OUT TO MAKE SURE PEOPLE KNOW WHAT THE HELL IS GOING ON
@@ -417,15 +413,15 @@ class Backend(ABC):
     def plot_everything_from_one_test(test_data, data, num_of_sites, test_tuple):
 
         # Find the limits
-        low_lim = get_plot_min(data, test_tuple, num_of_sites)
-        hi_lim = get_plot_max(data, test_tuple, num_of_sites)
-        units = get_units(data, test_tuple, num_of_sites)
+        low_lim = Backend.get_plot_min(data, test_tuple, num_of_sites)
+        hi_lim = Backend.get_plot_max(data, test_tuple, num_of_sites)
+        units = Backend.get_units(data, test_tuple, num_of_sites)
 
         # Title for everything
         plt.suptitle(str("Test: " + test_tuple[0] + " - " + test_tuple[1] + " - Units: " + units))
 
         # Plots the table of results, showing a max of 16 sites at once, plus all the collective data
-        table = table_of_results(test_data, low_lim, hi_lim, units)
+        table = Backend.table_of_results(test_data, low_lim, hi_lim, units)
         table = table[0:17]
         plt.subplot(211)
         cell_text = []
@@ -437,7 +433,7 @@ class Backend(ABC):
 
         # Plots the trendline
         plt.subplot(223)
-        plot_full_test_trend(test_data, low_lim, hi_lim)
+        Backend.plot_full_test_trend(test_data, low_lim, hi_lim)
         plt.xlabel("Trials")
         plt.ylabel(units)
         plt.title("Trendline")
@@ -445,7 +441,7 @@ class Backend(ABC):
 
         # Plots the histogram
         plt.subplot(224)
-        plot_full_test_hist(test_data, low_lim, hi_lim)
+        Backend.plot_full_test_hist(test_data, low_lim, hi_lim)
         plt.xlabel(units)
         plt.ylabel("Trials")
         plt.title("Histogram")
@@ -468,17 +464,17 @@ class Backend(ABC):
     # Returns the lower allowed limit of a set of data
     @staticmethod
     def get_plot_min(data, test_tuple, num_of_sites):
-        return get_plot_extremes(data, test_tuple, num_of_sites)[0]
+        return Backend.get_plot_extremes(data, test_tuple, num_of_sites)[0]
 
     # Returns the upper allowed limit of a set of data
     @staticmethod
     def get_plot_max(data, test_tuple, num_of_sites):
-        return get_plot_extremes(data, test_tuple, num_of_sites)[1]
+        return Backend.get_plot_extremes(data, test_tuple, num_of_sites)[1]
 
     # Returns the units for a set of data
     @staticmethod
     def get_units(data, test_tuple, num_of_sites):
-        return get_plot_extremes(data, test_tuple, num_of_sites)[2]
+        return Backend.get_plot_extremes(data, test_tuple, num_of_sites)[2]
 
     # Abstraction of above 3 functions, returns tuple with min and max
     @staticmethod
@@ -503,7 +499,7 @@ class Backend(ABC):
 
         # Plots each site one at a time
         for i in range(0, len(test_data)):
-            plot_single_site_trend(test_data[i])
+            Backend.plot_single_site_trend(test_data[i])
 
         # Plots the minimum and maximum barriers
         plt.plot(range(0, len(test_data[0])), [minimum] * len(test_data[0]), color="red", linewidth=3.0)
@@ -528,11 +524,11 @@ class Backend(ABC):
         for i in range(0, len(test_list_data)):
             all_data_array = np.concatenate(test_list_data[i], axis=0)
 
-            units = get_units(data, test_list[i], num_of_sites)
-            minimum = get_plot_min(data, test_list[i], num_of_sites)
-            maximum = get_plot_max(data, test_list[i], num_of_sites)
+            units = Backend.get_units(data, test_list[i], num_of_sites)
+            minimum = Backend.get_plot_min(data, test_list[i], num_of_sites)
+            maximum = Backend.get_plot_max(data, test_list[i], num_of_sites)
 
-            summary_results.append(site_array(all_data_array, minimum, maximum, units, units))
+            summary_results.append(Backend.site_array(all_data_array, minimum, maximum, units, units))
 
         test_names = []
         for i in range(0, len(test_list)):
@@ -553,10 +549,10 @@ class Backend(ABC):
 
         all_data = np.concatenate(test_data, axis=0)
 
-        test_results = [site_array(all_data, minimum, maximum, 'ALL', units)]
+        test_results = [Backend.site_array(all_data, minimum, maximum, 'ALL', units)]
 
         for i in range(0, len(test_data)):
-            test_results.append(site_array(test_data[i], minimum, maximum, i + 1, units))
+            test_results.append(Backend.site_array(test_data[i], minimum, maximum, i + 1, units))
 
         table = pd.DataFrame(test_results, columns=parameters)
 
@@ -576,16 +572,16 @@ class Backend(ABC):
         if units.lower() == 'db':
 
             for i in range(0, len(site_data)):
-                volt_data.append(db2v(site_data[i]))
+                volt_data.append(Backend.db2v(site_data[i]))
 
-            mean_result = v2db(np.mean(volt_data))
+            mean_result = Backend.v2db(np.mean(volt_data))
             standard_deviation = np.std(volt_data) * 100  # *100 for converting to %
             std_string = str('%.3E' % (Decimal(standard_deviation)))
 
-            cp_result = str(Decimal(cp(volt_data, db2v(minimum), db2v(maximum))).quantize(Decimal('0.001')))
-            cpl_result = str(Decimal(cpl(volt_data, db2v(minimum))).quantize(Decimal('0.001')))
-            cpu_result = str(Decimal(cpu(volt_data, db2v(maximum))).quantize(Decimal('0.001')))
-            cpk_result = str(Decimal(cpk(volt_data, db2v(minimum), db2v(maximum))).quantize(Decimal('0.001')))
+            cp_result = str(Decimal(Backend.cp(volt_data, Backend.db2v(minimum), Backend.db2v(maximum))).quantize(Decimal('0.001')))
+            cpl_result = str(Decimal(Backend.cpl(volt_data, Backend.db2v(minimum))).quantize(Decimal('0.001')))
+            cpu_result = str(Decimal(Backend.cpu(volt_data, Backend.db2v(maximum))).quantize(Decimal('0.001')))
+            cpk_result = str(Decimal(Backend.cpk(volt_data, Backend.db2v(minimum), Backend.db2v(maximum))).quantize(Decimal('0.001')))
 
         # Pass/fail data is stupid
         elif minimum == maximum:
@@ -600,15 +596,15 @@ class Backend(ABC):
         else:
             mean_result = np.mean(site_data)
             std_string = str(Decimal(np.std(site_data)).quantize(Decimal('0.001')))
-            cp_result = str(Decimal(cp(site_data, minimum, maximum)).quantize(Decimal('0.001')))
-            cpl_result = str(Decimal(cpu(site_data, minimum)).quantize(Decimal('0.001')))
-            cpu_result = str(Decimal(cpl(site_data, maximum)).quantize(Decimal('0.001')))
-            cpk_result = str(Decimal(cpk(site_data, minimum, maximum)).quantize(Decimal('0.001')))
+            cp_result = str(Decimal(Backend.cp(site_data, minimum, maximum)).quantize(Decimal('0.001')))
+            cpl_result = str(Decimal(Backend.cpu(site_data, minimum)).quantize(Decimal('0.001')))
+            cpu_result = str(Decimal(Backend.cpl(site_data, maximum)).quantize(Decimal('0.001')))
+            cpk_result = str(Decimal(Backend.cpk(site_data, minimum, maximum)).quantize(Decimal('0.001')))
 
         # Appending all the important results weow!
         site_results.append(str(site_number))
         site_results.append(str(len(site_data)))
-        site_results.append(str(calculate_fails(site_data, minimum, maximum)))
+        site_results.append(str(Backend.calculate_fails(site_data, minimum, maximum)))
         site_results.append(str(Decimal(min(site_data)).quantize(Decimal('0.001'))))
         site_results.append(str(Decimal(mean_result).quantize(Decimal('0.001'))))
         site_results.append(str(Decimal(max(site_data)).quantize(Decimal('0.001'))))
@@ -649,7 +645,7 @@ class Backend(ABC):
 
         # Plots each site one at a time
         for i in range(0, len(test_data)):
-            plot_single_site_hist(test_data[i], minimum, maximum)
+            Backend.plot_single_site_hist(test_data[i], minimum, maximum)
 
         # My feeble attempt to get pretty dynamic limits
         if minimum == maximum:
