@@ -2,7 +2,7 @@
 # ATE STDF Data Reader Python Edition             #
 # Version: Beta 0.8                               #
 #                                                 #
-# March 15, 2018                                  #
+# March 20, 2018                                  #
 # Thomas Kaunzinger                               #
 # LTX-Credence / XCerra Corp.                     #
 #                                                 #
@@ -106,7 +106,6 @@ bz2Pattern = re.compile('\.bz2', re.I)
 # if gui_input is true, the program will use the GUI I am attempting to build (unfinished)
 # if gui_input is false and cmd_input is true, the program will use the command-line interface (stable and functional)
 # if both are false, then it defaults to the hard-coded configuration that I just made for testing quickly (bad idea)
-gui_input = True
 cmd_input = True
 
 
@@ -119,49 +118,8 @@ cmd_input = True
 # Defining the main method
 def main():
 
-    parse_selected = False
-
-    # GUI functionality (NOT ACTUALLY IMPLEMENTED YET)
-    if gui_input:
-
-        # How do I interface design
-        fg = "#f24f4f"
-        bg = "#7cd2ff"   # "#01a5fa"
-        box = "#d6d8db"
-        font = "Raleway"
-
-        root = Tk()
-        root.config(bg=bg)
-        root.option_add("*font", font)
-
-
-        # Title text frame
-        title_frame = Frame(root)
-        title_frame.grid(row=0, column=0, sticky=NW)
-        title_text = Label(title_frame, text="ATE STDF Analyzer")
-        title_text.config(font="Raleway 30 bold", fg=fg, bg=bg)
-        title_text.pack()
-
-
-        # Uploading frame
-        upload_frame = Frame(root)
-        upload_frame.config(bg=bg)
-        upload_frame.grid(row=1, column=0, sticky=NW)
-
-        upload_button = Button(upload_frame, text="Upload STD/STDF", bg=box, fg=fg)
-        upload_button.bind("<Button-1>", test)
-        upload_button.grid(row=0, column=0, sticky=W)
-
-        parse_button = Button(upload_frame, text="Parse STD/STDF to .txt", bg=box, fg=fg)
-        parse_button.grid(row=1, column=0, sticky=W)
-
-        file = tkinter.filedialog.askopenfile(parent=upload_frame, mode='rb', title='Choose a file')
-
-
-        root.mainloop()
-
     # Command-line interface for file selection
-    elif cmd_input:
+    if cmd_input:
 
         file_selected = False
         while not file_selected:
@@ -379,6 +337,15 @@ def main():
 
         # Choose to render the pdf
         pdf_render = False
+        # Extracts the PTR data for the selected test number
+        all_ptr_test = []
+        for i in range(0, len(selected_test_all)):
+            all_ptr_test.append(ptr_extractor(number_of_sites, ptr_data, selected_test_all[i]))
+
+        # Gathers each set of data from all runs for each site in all selected tests
+        all_test = []
+        for i in range(len(all_ptr_test)):
+            all_test.append(single_test_data(number_of_sites, all_ptr_test[i]))
         chosen = False
         while not chosen:
             pdf_selection = input('Render detailed PDF results of all tests (slow if lots of data selected)? (y/n): ')
@@ -412,16 +379,7 @@ def main():
         summary = True
 
 
-    # Extracts the PTR data for the selected test number
-    all_ptr_test = []
-    for i in range(0, len(selected_test_all)):
-        all_ptr_test.append(ptr_extractor(number_of_sites, ptr_data, selected_test_all[i]))
 
-
-    # Gathers each set of data from all runs for each site in all selected tests
-    all_test = []
-    for i in range(len(all_ptr_test)):
-        all_test.append(single_test_data(number_of_sites, all_ptr_test[i]))
 
 
     # ~~~~~ Execution of data processing functions ~~~~~ #
@@ -450,20 +408,6 @@ def main():
         plot_list_of_tests(all_test, ptr_data, number_of_sites, selected_test_all, filepath)
 
     # ~~~~~ END OF MAIN FUNCTION ~~~~~ #
-
-###################################################
-
-#####################
-# TKINTER FUNCTIONS #
-#####################
-
-# This is probably going to be a disaster lmfao
-def test(event):
-    print("test")
-
-def browse_for_file(event):
-    file =
-
 
 
 ###################################################

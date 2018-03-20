@@ -1,7 +1,27 @@
-# Probably not doing anything meaningful here, but I want to test how pyqt works over tkinter
-# Credits to ZetCode for the tutorial
+###################################################
+# ATE STDF Data Reader Python Edition (GUI)       #
+# Version: Beta 0.1                               #
+#                                                 #
+# March 20, 2018                                  #
+# Thomas Kaunzinger                               #
+# LTX-Credence / XCerra Corp.                     #
+#                                                 #
+# References:                                     #
+# PySTDF Library                                  #
+# PyQt5                                           #
+# numpy                                           #
+# matplotlib                                      #
+# countrymarmot (cp + cpk)                        #
+# PyPDF2                                          #
+# ZetCode + sentdex (PyQt tutorials)              #
+# My crying soul because there's no documentation #
+###################################################
 
 ###################################################
+
+#######################
+# IMPORTING LIBRARIES #
+#######################
 
 import sys
 # from PyQt5.QtWidgets import QWidget, QDesktopWidget, QApplication, QToolTip, QPushButton
@@ -28,63 +48,9 @@ from PyPDF2 import PdfFileMerger, PdfFileReader
 
 ###################################################
 
-
-# We're living that object oriented life now
-# Here's where I put my functions for reading files
-class FileReaders(ABC):
-
-    # processing that big boi
-    @staticmethod
-    def process_file(filename):
-        # Lets you know what's goin' on
-        print('Parsing data...')
-        print()
-
-        # Open that bad boi up
-        f = open(filename, 'rb')
-        reopen_fn = None
-
-        # The name of the new file, preserving the directory of the previous
-        newFile = filename + "_parsed.txt"
-
-        # I guess I'm making a parsing object here, but again I didn't write this part
-        p = Parser(inp=f, reopen_fn=reopen_fn)
-
-        # Writing to a text file instead of vomiting it to the console
-        with open(newFile, 'w') as fout:
-            p.addSink(TextWriter(stream=fout))  # fout writes it to the opened text file
-            p.parse()
-
-        # We don't need to keep that file open
-        f.close()
-
-
-    # Parses that big boi but this time in Excel format (slow, don't use unless you wish to look at how it's organized)
-    @staticmethod
-    def to_excel(filename):
-        # Converts the stdf to a data frame... somehow
-        # (i do not ever intend on looking how he managed to parse this gross file format)
-        tables = STDF2DataFrame(filename)
-
-        # The name of the new file, preserving the directory of the previous
-        fname = filename + "_excel.xlsx"
-
-        # Writing object to work with excel documents
-        writer = pd.ExcelWriter(fname, engine='xlsxwriter')
-
-        # Not mine and I don't really know what's going on here, but it works, so I won't question him.
-        # It actually write the data frame as an excel document
-        for k, v in tables.items():
-            # Make sure the order of columns complies the specs
-            record = [r for r in V4.records if r.__class__.__name__.upper() == k]
-            if len(record) == 0:
-                print("Ignore exporting table %s: No such record type exists." % k)
-            else:
-                columns = [field[0] for field in record[0].fieldMap]
-                v.to_excel(writer, sheet_name=k, columns=columns, index=False, na_rep="N/A")
-
-        writer.save()
-
+########################
+# QT GUI FUNCTIONALITY #
+########################
 
 # Object oriented programming should be illegal cus i forgot how to be good at it
 # These are the functions for the widget application objects that run the whole interface
@@ -124,6 +90,7 @@ class Application(QWidget):
         # Generates a summary of the loaded text
         self.generate_summary_button = QPushButton('Generate summary of all results')
         self.generate_summary_button.setToolTip('Generate a results .csv summary for the uploaded parsed .txt')
+        self.generate_summary_button.clicked.connect(self.make_csv)
 
         # Selects a test result for the desired
         self.select_test_menu = QComboBox()
@@ -140,6 +107,9 @@ class Application(QWidget):
         self.setFixedSize(self.WINDOW_SIZE[0], self.WINDOW_SIZE[1])
         self.center()
         self.setWindowTitle('ATE Data Reader')
+
+        self.test_text = QLabel()
+        self.test_text.setText("test")
 
         self.file_selected = False
 
@@ -292,10 +262,566 @@ class Application(QWidget):
 
 
 
-    # Gets the list of tests from a parsed text file
-    def get_list(self, string):
-        if string is None or string == '':
-            return ['ALL TESTS']
+    def make_csv(self):
+
+        if self.file_selected:
+
+            # Extracts the PTR data for the selected test number
+            all_ptr_test = []
+            for i in range(1, len(self.list_of_test_numbers)):
+                all_ptr_test.append(Backend.ptr_extractor(self.number_of_sites, self.ptr_data, self.list_of_test_numbers[i]))
+
+            # Gathers each set of data from all runs for each site in all selected tests
+            all_test = []
+            for i in range(len(all_ptr_test)):
+                all_test.append(Backend.single_test_data(self.number_of_sites, all_ptr_test[i]))
+
+
+            print(all_ptr_test[0:10])
+            print(all_test[0:10])
+            print(self.list_of_test_numbers[1: len(self.list_of_test_numbers)])
+
+            table = Backend.get_summary_table(all_test, self.ptr_data, self.number_of_sites, self.list_of_test_numbers[1: len(self.list_of_test_numbers)])
+
+            # In case someone has the file open
+            try:
+                table.to_csv(path_or_buf=str(self.file_path + "_summary.csv"))
+                self.status_text.setText(str(".csv written successfully!"))
+
+            except PermissionError:
+
+                self.status_text.setText(str("Please close " + self.file_path + "_summary.csv"))
+
+        else:
+
+            self.status_text.setText('Please select a file')
+            pass
+
+
+###################################################
+
+#####################
+# BACKEND FUNCTIONS #
+#####################
+
+
+# IMPORTANT DOCUMENTATION I NEED TO FILL OUT TO MAKE SURE PEOPLE KNOW WHAT THE HELL IS GOING ON
+
+# ~~~~~~~~~~ Data definition explanations (in functions) ~~~~~~~~~~ #
+# data --> ptr_data                                                 #
+#   gathered in main()                                              #
+#                                                                   #
+# test_tuple --> ['test_number', 'test_name']                       #
+#   Structure for associating a test's name with its test number    #
+#                                                                   #
+# test_list --> List of test_tuple                                  #
+#   find_test_of_number() returns this                              #
+#   list_of_test_numbers in main() is the complete list of this     #
+#                                                                   #
+# num_of_sites --> number of testing sites for each test run        #
+#   number_of_sites = int(sdr_parse[3]) in main()                   #
+#                                                                   #
+# test_list_data --> list of sets of site_data                      #
+#   (sorted in the same order as corresponding tests in test_list)  #
+#                                                                   #
+# site_data --> array of float data points number_of_sites long     #
+#   raw data for a single corresponding test_tuple                  #
+#                                                                   #
+# test_list and test_list_data are the same length                  #
+#                                                                   #
+# minimum, maximum --> floats                                       #
+#   lower and upper extremes for a site_data from a corresponding   #
+#       test_tuple. These are found in the ptr_data (data), which   #
+#       has the values located in one of the columns for the first  #
+#       test site in the first data point in a test.                #
+#   returned by get_plot_extremes() abstraction                     #
+# units --> string                                                  #
+#   Gathered virtually identically to minimum and maximum.          #
+#       Represents units for plotting and post calculations on      #
+#       data sets.                                                  #
+#                                                                   #
+# ~~~~~~~~~~~~ Parsed text file structure explanation ~~~~~~~~~~~~~ #
+# The PySTDF library parses the data really non-intuitively,        #
+#   although it can be viewed somewhat more clearly if you use the  #
+#   toExcel() function (I recommend doing this for figuring out the #
+#   way the file is formatted). Basically, each '|' separates the   #
+#   information in columns, and the first column determines the     #
+#   "page" you are dealing with. The only ones I found particularly #
+#   useful were SDR (for the number of sites) and PTR (where all    #
+#   the data is actually contained).                                #
+# The way the PTR data is parsed is very non-intuitive still, with  #
+#   the data broken into chunks num_of_sites lines long, meaning    #
+#   each chunk of num_of_sites lines contain a corresponding        #
+#   test_tuple that can be extracted, as well as a data point       #
+#   result for each test site. This is then done for every single   #
+#   test_tuple combination. After all that is done, the process is  #
+#   repeated for every single run of the test, creating a new data  #
+#   point for each site in each test tuple for however many numbers #
+#   of tests there are.                                             #
+# It's very not obvious at first, so I strongly recommend creating  #
+#   an excel file first to look at it yourself and reverse-engineer #
+#   it like I did if you really want to try and figure out the file #
+#   format yourself. I'm sorry the library sucks but I didn't       #
+#   design it :/ . Good luck!                                       #
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
+
+# This is horrible design and I'm so sorry, but here's a huge library full of static methods
+class Backend(ABC):
+
+    # Given a set of data for each test, the full set of ptr data, the number of sites, and the list of names/tests for the
+    #   set of data needed, expect each item in this set of data to be plotted in a new figure
+    # test_list_data should be an array of arrays of arrays with the same length as test_list, which is an array of tuples
+    #   with each tuple representing the test number and name of the test data in that specific trial
+    @staticmethod
+    def plot_list_of_tests(test_list_data, data, num_of_sites, test_list, directory):
+        # Runs through each of the tests in the list and plots it in a new figure
+        pp = PdfFileMerger()
+
+        for i in range(0, len(test_list)):
+
+            pdfTemp = PdfPages(str(directory + "_results_temp"))
+
+            plt.figure(figsize=(11, 8.5))
+            pdfTemp.savefig(plot_everything_from_one_test(test_list_data[i], data, num_of_sites, test_list[i]))
+
+            pdfTemp.close()
+
+            pp.append(PdfFileReader(str(directory + "_results_temp"), "rb"))
+
+            if i % 10 == 0:
+                print(str(i) + "/" + str(len(test_list)) + " test results completed")
+
+            plt.close()
+
+        print(str(len(test_list)) + "/" + str(len(test_list)) + " test results completed")
+        print()
+
+        os.remove(str(directory + "_results_temp"))
+
+        # Makes sure that the pdf isn't open and prompts you to close it if it is
+        written = False
+        while not written:
+            try:
+                pp.write(str(directory + "_results.pdf"))
+                print('PDF written successfully!')
+                written = True
+
+            except PermissionError:
+                print(str('Please close ' + str(directory + "_results.pdf") + ' and try again.'))
+                input('Press <Enter> to continue...')
+                print()
+
+    # Plots the results of everything from one test
+    @staticmethod
+    def plot_everything_from_one_test(test_data, data, num_of_sites, test_tuple):
+
+        # Find the limits
+        low_lim = get_plot_min(data, test_tuple, num_of_sites)
+        hi_lim = get_plot_max(data, test_tuple, num_of_sites)
+        units = get_units(data, test_tuple, num_of_sites)
+
+        # Title for everything
+        plt.suptitle(str("Test: " + test_tuple[0] + " - " + test_tuple[1] + " - Units: " + units))
+
+        # Plots the table of results, showing a max of 16 sites at once, plus all the collective data
+        table = table_of_results(test_data, low_lim, hi_lim, units)
+        table = table[0:17]
+        plt.subplot(211)
+        cell_text = []
+        for row in range(len(table)):
+            cell_text.append(table.iloc[row])
+
+        plt.table(cellText=cell_text, colLabels=table.columns, loc='center')
+        plt.axis('off')
+
+        # Plots the trendline
+        plt.subplot(223)
+        plot_full_test_trend(test_data, low_lim, hi_lim)
+        plt.xlabel("Trials")
+        plt.ylabel(units)
+        plt.title("Trendline")
+        plt.grid(color='0.9', linestyle='--', linewidth=1)
+
+        # Plots the histogram
+        plt.subplot(224)
+        plot_full_test_hist(test_data, low_lim, hi_lim)
+        plt.xlabel(units)
+        plt.ylabel("Trials")
+        plt.title("Histogram")
+        plt.grid(color='0.9', linestyle='--', linewidth=1, axis='y')
+
+    # TestNumber (string) + ListOfTests (list of tuples) -> ListOfTests with TestNumber as the 0th index (list of tuples)
+    # Takes a string representing a test number and returns any test names associated with that test number
+    #   e.g. one test number may be 1234 and might have 40 tests run on it, but it may be 20 tests under
+    #   the name "device_test_20kHz" and then another 20 tests under the name "device_test_100kHz", meaning
+    #   there were two unique tests run under the same test number.
+    @staticmethod
+    def find_tests_of_number(test_number, test_list):
+        tests_of_number = []
+        for i in range(0, len(test_list)):
+            if test_list[i][0] == test_number:
+                tests_of_number.append(test_list[i])
+
+        return tests_of_number
+
+    # Returns the lower allowed limit of a set of data
+    @staticmethod
+    def get_plot_min(data, test_tuple, num_of_sites):
+        return get_plot_extremes(data, test_tuple, num_of_sites)[0]
+
+    # Returns the upper allowed limit of a set of data
+    @staticmethod
+    def get_plot_max(data, test_tuple, num_of_sites):
+        return get_plot_extremes(data, test_tuple, num_of_sites)[1]
+
+    # Returns the units for a set of data
+    @staticmethod
+    def get_units(data, test_tuple, num_of_sites):
+        return get_plot_extremes(data, test_tuple, num_of_sites)[2]
+
+    # Abstraction of above 3 functions, returns tuple with min and max
+    @staticmethod
+    def get_plot_extremes(data, test_tuple, num_of_sites):
+        minimum_test = 0
+        maximum_test = 1
+        units = ''
+        temp = 0
+        not_found = True
+        while not_found:
+            if data[temp].split("|")[1] == test_tuple[0]:
+                minimum_test = float(data[temp].split("|")[13])
+                maximum_test = float(data[temp].split("|")[14])
+                units = (data[temp].split("|")[15])
+                not_found = False
+            temp += num_of_sites
+        return [minimum_test, maximum_test, units]
+
+    # Plots the results of all sites from one test
+    @staticmethod
+    def plot_full_test_trend(test_data, minimum, maximum):
+
+        # Plots each site one at a time
+        for i in range(0, len(test_data)):
+            plot_single_site_trend(test_data[i])
+
+        # Plots the minimum and maximum barriers
+        plt.plot(range(0, len(test_data[0])), [minimum] * len(test_data[0]), color="red", linewidth=3.0)
+        plt.plot(range(0, len(test_data[0])), [maximum] * len(test_data[0]), color="red", linewidth=3.0)
+
+        # My feeble attempt to get pretty dynamic limits
+        expand = max([abs(minimum), abs(maximum)])
+        if minimum == maximum:
+            plt.ylim(ymin=-0.05)
+            plt.ylim(ymax=1.05)
+        else:
+            plt.ylim(ymin=minimum - abs(0.05 * expand))
+            plt.ylim(ymax=maximum + abs(0.05 * expand))
+
+    # Supposedly gets the summary results for all sites in each test
+    @staticmethod
+    def get_summary_table(test_list_data, data, num_of_sites, test_list):
+        parameters = ['Units', 'Runs', 'Fails', 'Min', 'Mean', 'Max', 'Range', 'STD', 'Cp', 'Cpl', 'Cpu', 'Cpk']
+
+        summary_results = []
+
+        for i in range(0, len(test_list_data)):
+            all_data_array = np.concatenate(test_list_data[i], axis=0)
+
+            units = get_units(data, test_list[i], num_of_sites)
+            minimum = get_plot_min(data, test_list[i], num_of_sites)
+            maximum = get_plot_max(data, test_list[i], num_of_sites)
+
+            summary_results.append(site_array(all_data_array, minimum, maximum, units, units))
+
+        test_names = []
+        for i in range(0, len(test_list)):
+            test_names.append(test_list[i][1])
+
+        table = pd.DataFrame(summary_results, columns=parameters, index=test_names)
+
+        return table
+
+    # Returns the table of the results of all the tests to visualize the data
+    @staticmethod
+    def table_of_results(test_data, minimum, maximum, units):
+        parameters = ['Site', 'Runs', 'Fails', 'Min', 'Mean', 'Max', 'Range', 'STD', 'Cp', 'Cpl', 'Cpu', 'Cpk']
+
+        # Clarification
+        if units.lower() == 'db':
+            parameters[7] = 'STD (%)'
+
+        all_data = np.concatenate(test_data, axis=0)
+
+        test_results = [site_array(all_data, minimum, maximum, 'ALL', units)]
+
+        for i in range(0, len(test_data)):
+            test_results.append(site_array(test_data[i], minimum, maximum, i + 1, units))
+
+        table = pd.DataFrame(test_results, columns=parameters)
+
+        return table
+
+    # Returns an array a site's final test results
+    @staticmethod
+    def site_array(site_data, minimum, maximum, site_number, units):
+
+        # Big boi initialization
+        site_results = []
+
+        # Not actually volts, it's actually % if it's db technically but who cares
+        volt_data = []
+
+        # The struggles of logarithmic data
+        if units.lower() == 'db':
+
+            for i in range(0, len(site_data)):
+                volt_data.append(db2v(site_data[i]))
+
+            mean_result = v2db(np.mean(volt_data))
+            standard_deviation = np.std(volt_data) * 100  # *100 for converting to %
+            std_string = str('%.3E' % (Decimal(standard_deviation)))
+
+            cp_result = str(Decimal(cp(volt_data, db2v(minimum), db2v(maximum))).quantize(Decimal('0.001')))
+            cpl_result = str(Decimal(cpl(volt_data, db2v(minimum))).quantize(Decimal('0.001')))
+            cpu_result = str(Decimal(cpu(volt_data, db2v(maximum))).quantize(Decimal('0.001')))
+            cpk_result = str(Decimal(cpk(volt_data, db2v(minimum), db2v(maximum))).quantize(Decimal('0.001')))
+
+        # Pass/fail data is stupid
+        elif minimum == maximum:
+            mean_result = np.mean(site_data)
+            std_string = str(np.std(site_data))
+            cp_result = 'N/A'
+            cpl_result = 'N/A'
+            cpu_result = 'N/A'
+            cpk_result = 'N/A'
+
+        # Yummy linear data instead
+        else:
+            mean_result = np.mean(site_data)
+            std_string = str(Decimal(np.std(site_data)).quantize(Decimal('0.001')))
+            cp_result = str(Decimal(cp(site_data, minimum, maximum)).quantize(Decimal('0.001')))
+            cpl_result = str(Decimal(cpu(site_data, minimum)).quantize(Decimal('0.001')))
+            cpu_result = str(Decimal(cpl(site_data, maximum)).quantize(Decimal('0.001')))
+            cpk_result = str(Decimal(cpk(site_data, minimum, maximum)).quantize(Decimal('0.001')))
+
+        # Appending all the important results weow!
+        site_results.append(str(site_number))
+        site_results.append(str(len(site_data)))
+        site_results.append(str(calculate_fails(site_data, minimum, maximum)))
+        site_results.append(str(Decimal(min(site_data)).quantize(Decimal('0.001'))))
+        site_results.append(str(Decimal(mean_result).quantize(Decimal('0.001'))))
+        site_results.append(str(Decimal(max(site_data)).quantize(Decimal('0.001'))))
+        site_results.append(str(Decimal(max(site_data) - min(site_data)).quantize(Decimal('0.001'))))
+        site_results.append(std_string)
+        site_results.append(cp_result)
+        site_results.append(cpl_result)
+        site_results.append(cpu_result)
+        site_results.append(cpk_result)
+
+        return site_results
+
+    # Converts to decibels
+    @staticmethod
+    def v2db(v):
+        return 20 * np.log10(abs(v))
+
+    # Converts from decibels
+    @staticmethod
+    def db2v(db):
+        return 10 ** (db / 20)
+
+    # Counts the number of fails in a data set
+    @staticmethod
+    def calculate_fails(site_data, minimum, maximum):
+        fails_count = 0
+
+        # Increase a fails counter for every data point that exceeds an extreme
+        for i in range(0, len(site_data)):
+            if site_data[i] > maximum or site_data[i] < minimum:
+                fails_count += 1
+
+        return fails_count
+
+    # Plots the historgram results of all sites from one test
+    @staticmethod
+    def plot_full_test_hist(test_data, minimum, maximum):
+
+        # Plots each site one at a time
+        for i in range(0, len(test_data)):
+            plot_single_site_hist(test_data[i], minimum, maximum)
+
+        # My feeble attempt to get pretty dynamic limits
+        if minimum == maximum:
+            plt.xlim(xmin=0)
+            plt.xlim(xmax=1)
+        else:
+            plt.xlim(xmin=minimum)
+            plt.xlim(xmax=maximum)
+
+        plt.ylim(ymin=0)
+        plt.ylim(ymax=len(test_data[0]))
+
+    # Plots a single site's results
+    @staticmethod
+    def plot_single_site_trend(site_data):
+        plt.plot(range(0, len(site_data)), site_data)
+
+    # Plots a single site's results as a histogram
+    @staticmethod
+    def plot_single_site_hist(site_data, minimum, maximum):
+        # At the moment the bins are the same as they are in the previous program's results. Will add fail bin later.
+
+        # Damn pass/fail data exceptions everywhere
+        if minimum == maximum:
+            binboi = np.linspace(0, 1, 21)
+
+        else:
+            binboi = np.linspace(minimum, maximum, 21)
+
+        plt.hist(np.clip(site_data, binboi[0], binboi[-1]), bins=binboi, edgecolor='white', linewidth=0.5)
+
+    # Creates an array of arrays that has the raw data for each test site in one particular test
+    # Given the integer number of sites under test and the Array result from ptr_extractor for a certain test num + name,
+    #   expect a 2D array with each row being the reran test results for each of the sites in a particular test
+    @staticmethod
+    def single_test_data(num_of_sites, extracted_ptr):
+
+        # Me being bad at initializing arrays again, hush
+        single_test = []
+
+        # Runs through once for each of the sites in the test, incrementing by 1
+        for i in range(0, num_of_sites):
+
+            single_site = []
+
+            # Runs through once for each of the loops of the test, incrementing by the number of test sites until all test
+            # loops are covered for the individual testing site. The incremented i offsets it so that it moves on to the
+            # next testing site
+            for j in range(i, len(extracted_ptr), num_of_sites):
+                single_site.append(float(extracted_ptr[j][6]))
+
+            single_test.append(single_site)
+
+        return single_test
+
+    # Integer (Number_of_sites), Parsed List of Strings (ptr_data specifically), tuple ([test_number, test_name])
+    #   Returns -> array with just the relevant test data parsed along '|'
+    # It grabs the data for a certain test in the PTR data and turns that specific test into an array of arrays
+    @staticmethod
+    def ptr_extractor(num_of_sites, data, test_number):
+
+        # Initializes an array of the data from one of the tests for all test sites
+        ptr_array_test = []
+
+        # Finds where in the data to start looking for the test in question
+        starting_index = 0
+        for i in range(0, len(data), num_of_sites):
+            if (data[i].split("|")[1] == test_number[0]) and (data[i].split("|")[7] == test_number[1]):
+                starting_index = i
+                for j in range(starting_index, (starting_index + num_of_sites)):
+                    ptr_array_test.append(data[j].split("|"))
+
+        # Returns the array weow!
+        return ptr_array_test
+
+    # For the four following functions, site_data is a list of raw floating point data, minimum is the lower limit and
+    # maximum is the upper limit
+
+    # CP AND CPK FUNCTIONS
+    # Credit to: countrymarmot on github gist:  https://gist.github.com/countrymarmot/8413981
+    @staticmethod
+    def cp(site_data, minimum, maximum):
+        sigma = np.std(site_data)
+        cp_value = float(maximum - minimum) / (6 * sigma)
+        return cp_value
+
+    @staticmethod
+    def cpk(site_data, minimum, maximum):
+        sigma = np.std(site_data)
+        m = np.mean(site_data)
+        cpu_value = float(maximum - m) / (3 * sigma)
+        cpl_value = float(m - minimum) / (3 * sigma)
+        cpk_value = np.min([cpu_value, cpl_value])
+        return cpk_value
+
+    # One sided calculations (cpl/cpu)
+    @staticmethod
+    def cpl(site_data, minimum):
+        sigma = np.std(site_data)
+        m = np.mean(site_data)
+        cpl_value = float(m - minimum) / (3 * sigma)
+        return cpl_value
+
+    @staticmethod
+    def cpu(site_data, maximum):
+        sigma = np.std(site_data)
+        m = np.mean(site_data)
+        cpu_value = float(maximum - m) / (3 * sigma)
+        return cpu_value
+
+
+
+
+
+###################################################
+
+############################
+# FILE READING AND PARSING #
+############################
+
+# We're living that object oriented life now
+# Here's where I put my functions for reading files
+class FileReaders(ABC):
+
+    # processing that big boi
+    @staticmethod
+    def process_file(filename):
+
+        # Open that bad boi up
+        f = open(filename, 'rb')
+        reopen_fn = None
+
+        # The name of the new file, preserving the directory of the previous
+        newFile = filename + "_parsed.txt"
+
+        # I guess I'm making a parsing object here, but again I didn't write this part
+        p = Parser(inp=f, reopen_fn=reopen_fn)
+
+        # Writing to a text file instead of vomiting it to the console
+        with open(newFile, 'w') as fout:
+            p.addSink(TextWriter(stream=fout))  # fout writes it to the opened text file
+            p.parse()
+
+        # We don't need to keep that file open
+        f.close()
+
+
+    # Parses that big boi but this time in Excel format (slow, don't use unless you wish to look at how it's organized)
+    @staticmethod
+    def to_excel(filename):
+        # Converts the stdf to a data frame... somehow
+        # (i do not ever intend on looking how he managed to parse this gross file format)
+        tables = STDF2DataFrame(filename)
+
+        # The name of the new file, preserving the directory of the previous
+        fname = filename + "_excel.xlsx"
+
+        # Writing object to work with excel documents
+        writer = pd.ExcelWriter(fname, engine='xlsxwriter')
+
+        # Not mine and I don't really know what's going on here, but it works, so I won't question him.
+        # It actually write the data frame as an excel document
+        for k, v in tables.items():
+            # Make sure the order of columns complies the specs
+            record = [r for r in V4.records if r.__class__.__name__.upper() == k]
+            if len(record) == 0:
+                print("Ignore exporting table %s: No such record type exists." % k)
+            else:
+                columns = [field[0] for field in record[0].fieldMap]
+                v.to_excel(writer, sheet_name=k, columns=columns, index=False, na_rep="N/A")
+
+        writer.save()
 
 
 # Execute me
