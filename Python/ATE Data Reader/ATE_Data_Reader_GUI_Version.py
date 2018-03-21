@@ -289,17 +289,25 @@ class Application(QWidget):
         # Won't perform action unless there's actually a file
         if self.file_selected:
 
+            self.progress_bar.setValue(0)
+
             # Extracts the PTR data for the selected test number
             all_ptr_test = []
             for i in range(1, len(self.list_of_test_numbers)):
                 all_ptr_test.append(Backend.ptr_extractor(self.number_of_sites, self.ptr_data, self.list_of_test_numbers[i]))
+
+                self.progress_bar.setValue(i / len(self.list_of_test_numbers) * 50)
 
             # Gathers each set of data from all runs for each site in all selected tests
             all_test = []
             for i in range(len(all_ptr_test)):
                 all_test.append(Backend.single_test_data(self.number_of_sites, all_ptr_test[i]))
 
-            table = Backend.get_summary_table(all_test, self.ptr_data, self.number_of_sites, self.list_of_test_numbers[1: len(self.list_of_test_numbers)])
+                self.progress_bar.setValue(50 + i / len(all_ptr_test) * 10)
+
+            table = self.get_summary_table(all_test, self.ptr_data, self.number_of_sites, self.list_of_test_numbers[1: len(self.list_of_test_numbers)])
+
+            self.progress_bar.setValue(99)
 
             # In case someone has the file open
             try:
@@ -310,10 +318,14 @@ class Application(QWidget):
                     table.to_csv(path_or_buf=str(self.file_path[:-11] + "_summary.csv"))
                     self.status_text.setText(str(self.file_path[:-11].split('/')[-1] + "_summary.csv written successfully!"))
 
+                    self.progress_bar.setValue(100)
+
                 else:
 
                     table.to_csv(path_or_buf=str(self.file_path.split('/')[-1] + "_summary.csv"))
                     self.status_text.setText(str(self.file_path.split('/')[-1] + "_summary.csv written successfully!"))
+
+                    self.progress_bar.setValue(100)
 
             except PermissionError:
 
@@ -321,9 +333,13 @@ class Application(QWidget):
 
                     self.status_text.setText(str("Please close " + self.file_path[:-11].split('/')[-1] + "_summary.csv"))
 
+                    self.progress_bar.setValue(0)
+
                 else:
 
                     self.status_text.setText(str("Please close " + self.file_path.split('/')[-1].split('/')[-1] + "_summary.csv"))
+
+                    self.progress_bar.setValue(0)
 
         else:
 
@@ -340,8 +356,40 @@ class Application(QWidget):
             self.selected_tests = Backend.find_tests_of_number(i.split(' - ')[0], self.list_of_test_numbers[1:])
 
 
+    # Supposedly gets the summary results for all sites in each test (COMPLETELY STOLEN FROM BACKEND LOL)
+    def get_summary_table(self, test_list_data, data, num_of_sites, test_list):
 
+        parameters = ['Units', 'Runs', 'Fails', 'Min', 'Mean', 'Max', 'Range', 'STD', 'Cp', 'Cpl', 'Cpu', 'Cpk']
 
+        summary_results = []
+
+        for i in range(0, len(test_list_data)):
+
+            all_data_array = np.concatenate(test_list_data[i], axis=0)
+
+            units = Backend.get_units(data, test_list[i], num_of_sites)
+
+            minimum = Backend.get_plot_min(data, test_list[i], num_of_sites)
+
+            maximum = Backend.get_plot_max(data, test_list[i], num_of_sites)
+
+            summary_results.append(Backend.site_array(all_data_array, minimum, maximum, units, units))
+
+            self.progress_bar.setValue(60 + i / len(test_list_data) * 20)
+
+        test_names = []
+
+        for i in range(0, len(test_list)):
+
+            test_names.append(test_list[i][1])
+
+            self.progress_bar.setValue(80 + i / len(test_list) * 10)
+
+        table = pd.DataFrame(summary_results, columns=parameters, index=test_names)
+
+        self.progress_bar.setValue(95)
+
+        return table
 
 
 ###################################################
@@ -566,29 +614,6 @@ class Backend(ABC):
             plt.ylim(ymin=minimum - abs(0.05 * expand))
             plt.ylim(ymax=maximum + abs(0.05 * expand))
 
-    # Supposedly gets the summary results for all sites in each test
-    @staticmethod
-    def get_summary_table(test_list_data, data, num_of_sites, test_list):
-        parameters = ['Units', 'Runs', 'Fails', 'Min', 'Mean', 'Max', 'Range', 'STD', 'Cp', 'Cpl', 'Cpu', 'Cpk']
-
-        summary_results = []
-
-        for i in range(0, len(test_list_data)):
-            all_data_array = np.concatenate(test_list_data[i], axis=0)
-
-            units = Backend.get_units(data, test_list[i], num_of_sites)
-            minimum = Backend.get_plot_min(data, test_list[i], num_of_sites)
-            maximum = Backend.get_plot_max(data, test_list[i], num_of_sites)
-
-            summary_results.append(Backend.site_array(all_data_array, minimum, maximum, units, units))
-
-        test_names = []
-        for i in range(0, len(test_list)):
-            test_names.append(test_list[i][1])
-
-        table = pd.DataFrame(summary_results, columns=parameters, index=test_names)
-
-        return table
 
     # Returns the table of the results of all the tests to visualize the data
     @staticmethod
