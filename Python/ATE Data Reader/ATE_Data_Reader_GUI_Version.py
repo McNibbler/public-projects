@@ -182,21 +182,22 @@ class Application(QWidget):
             self.status_text.setText(str(filepath[0].split('/')[-1] + '_excel.xlsx created!'))
 
 
-    # Opens and reads a file to parse the data
+    # Opens and reads a file to parse the data. Much of this is what was done in main() from the text version
     def open_text(self):
 
         if self.file_selected:
 
             self.status_text.setText('Parsed .txt file already uploaded. Please restart program to upload another.')
-            pass
 
         else:
 
+            # Only accepts text files
             filterboi = 'Text (*.txt)'
             filepath = QFileDialog.getOpenFileName(caption='Open .txt File', filter=filterboi)
 
             self.file_path = filepath[0]
 
+            # Because you can open it and select nothing smh
             if self.file_path is not '':
 
                 self.data = open(self.file_path).read().splitlines()
@@ -258,12 +259,12 @@ class Application(QWidget):
             else:
 
                 self.status_text.setText('Please select a file')
-                pass
 
 
-
+    # Handler for the summary button to generate a csv table results file for a summary of the data
     def make_csv(self):
 
+        # Won't perform action unless there's actually a file
         if self.file_selected:
 
             # Extracts the PTR data for the selected test number
@@ -280,17 +281,31 @@ class Application(QWidget):
 
             # In case someone has the file open
             try:
-                table.to_csv(path_or_buf=str(self.file_path + "_summary.csv"))
-                self.status_text.setText(str(".csv written successfully!"))
+
+                # Names the file appropriately
+                if self.file_path.endswith('_parsed.txt'):
+
+                    table.to_csv(path_or_buf=str(self.file_path[:-11] + "_summary.csv"))
+                    self.status_text.setText(str(self.file_path[:-11].split('/')[-1] + "_summary.csv written successfully!"))
+
+                else:
+
+                    table.to_csv(path_or_buf=str(self.file_path.split('/')[-1] + "_summary.csv"))
+                    self.status_text.setText(str(self.file_path.split('/')[-1] + "_summary.csv written successfully!"))
 
             except PermissionError:
 
-                self.status_text.setText(str("Please close " + self.file_path + "_summary.csv"))
+                if self.file_path.endswith('_parsed.txt'):
+
+                    self.status_text.setText(str("Please close " + self.file_path[:-11].split('/')[-1] + "_summary.csv"))
+
+                else:
+
+                    self.status_text.setText(str("Please close " + self.file_path.split('/')[-1].split('/')[-1] + "_summary.csv"))
 
         else:
 
             self.status_text.setText('Please select a file')
-            pass
 
 
 ###################################################
@@ -362,7 +377,8 @@ class Application(QWidget):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 
-# This is horrible design and I'm so sorry, but here's a huge library full of static methods
+# This is horrible design and I'm so sorry, but here's a huge library full of static methods for processing the data
+# These were all taken virtually verbatim from the previous program so have mercy on me
 class Backend(ABC):
 
     # Given a set of data for each test, the full set of ptr data, the number of sites, and the list of names/tests for the
@@ -379,7 +395,7 @@ class Backend(ABC):
             pdfTemp = PdfPages(str(directory + "_results_temp"))
 
             plt.figure(figsize=(11, 8.5))
-            pdfTemp.savefig(plot_everything_from_one_test(test_list_data[i], data, num_of_sites, test_list[i]))
+            pdfTemp.savefig(Backend.plot_everything_from_one_test(test_list_data[i], data, num_of_sites, test_list[i]))
 
             pdfTemp.close()
 
