@@ -27,6 +27,7 @@ import sys
 # from PyQt5.QtWidgets import QWidget, QDesktopWidget, QApplication, QToolTip, QPushButton
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
+from PyQt5.QtCore import *
 
 import os
 
@@ -45,6 +46,8 @@ import pandas as pd
 
 from matplotlib.backends.backend_pdf import PdfPages
 from PyPDF2 import PdfFileMerger, PdfFileReader
+
+import time
 
 ###################################################
 
@@ -100,10 +103,11 @@ class Application(QWidget):
         # Button to generate the test results for the desired tests from the selected menu
         self.generate_pdf_button = QPushButton('Generate .pdf from selected tests')
         self.generate_pdf_button.setToolTip('Generate a .pdf file with the selected tests from the parsed .txt')
+        self.generate_pdf_button.clicked.connect(self.plot_list_of_tests)
 
         self.progress_bar = QProgressBar()
 
-        self.WINDOW_SIZE = (600, 180)
+        self.WINDOW_SIZE = (700, 180)
         self.file_path = None
         self.text_file_location = self.file_path
 
@@ -117,6 +121,9 @@ class Application(QWidget):
         self.selected_tests = []
 
         self.file_selected = False
+
+        self.all_test = []
+        self.all_data = self.all_test
 
         self.main_window()
 
@@ -240,12 +247,12 @@ class Application(QWidget):
                     elif self.data[i].startswith("MRR"):
                         self.mrr_data.append(self.data[i])
 
-                    self.progress_bar.setValue(10 + i/len(self.data) * 40)
+                    self.progress_bar.setValue(10 + i/len(self.data) * 20)
 
                 sdr_parse = self.sdr_data[0].split("|")
                 self.number_of_sites = int(sdr_parse[3])
 
-                self.progress_bar.setValue(55)
+                self.progress_bar.setValue(35)
 
                 self.list_of_test_numbers = [['', 'ALL DATA']]
                 # Gathers a list of the test numbers and the tests ran for each site, avoiding repeats from rerun tests
@@ -255,16 +262,34 @@ class Application(QWidget):
                     else:
                         self.list_of_test_numbers.append([self.ptr_data[i].split("|")[1], self.ptr_data[i].split("|")[7]])
 
-                    self.progress_bar.setValue(55 + i/len(self.ptr_data) * 25)
+                    self.progress_bar.setValue(35 + i/len(self.ptr_data) * 15)
 
+                # Extracts the PTR data for the selected test number
                 self.list_of_test_numbers_string = ['ALL DATA']
+                for i in range(1, len(self.list_of_test_numbers)):
+
+                    self.list_of_test_numbers_string.append(str(self.list_of_test_numbers[i][0] + ' - ' +self.list_of_test_numbers[i][1]))
+
+                    self.progress_bar.setValue(50 + i / len(self.list_of_test_numbers) * 15)
+
+
+
+                all_ptr_test = []
 
                 for i in range(1, len(self.list_of_test_numbers)):
 
-                    self.list_of_test_numbers_string.append(str(
-                        self.list_of_test_numbers[i][0] + ' - ' +self.list_of_test_numbers[i][1]))
+                    all_ptr_test.append(Backend.ptr_extractor(self.number_of_sites, self.ptr_data, self.list_of_test_numbers[i]))
 
-                    self.progress_bar.setValue(80 + i / len(self.list_of_test_numbers) * 19)
+                    self.progress_bar.setValue(65 + i / len(self.list_of_test_numbers) * 25)
+
+                # Gathers each set of data from all runs for each site in all selected tests
+
+                self.all_test = []
+                for i in range(len(all_ptr_test)):
+                    self.all_test.append(Backend.single_test_data(self.number_of_sites, all_ptr_test[i]))
+                    self.progress_bar.setValue(90 + i / len(all_ptr_test) * 9)
+
+                self.all_data = self.all_test
 
                 self.file_selected = True
 
@@ -291,23 +316,9 @@ class Application(QWidget):
 
             self.progress_bar.setValue(0)
 
-            # Extracts the PTR data for the selected test number
-            all_ptr_test = []
-            for i in range(1, len(self.list_of_test_numbers)):
-                all_ptr_test.append(Backend.ptr_extractor(self.number_of_sites, self.ptr_data, self.list_of_test_numbers[i]))
+            table = self.get_summary_table(self.all_test, self.ptr_data, self.number_of_sites, self.list_of_test_numbers[1: len(self.list_of_test_numbers)])
 
-                self.progress_bar.setValue(i / len(self.list_of_test_numbers) * 50)
-
-            # Gathers each set of data from all runs for each site in all selected tests
-            all_test = []
-            for i in range(len(all_ptr_test)):
-                all_test.append(Backend.single_test_data(self.number_of_sites, all_ptr_test[i]))
-
-                self.progress_bar.setValue(50 + i / len(all_ptr_test) * 10)
-
-            table = self.get_summary_table(all_test, self.ptr_data, self.number_of_sites, self.list_of_test_numbers[1: len(self.list_of_test_numbers)])
-
-            self.progress_bar.setValue(99)
+            self.progress_bar.setValue(10)
 
             # In case someone has the file open
             try:
@@ -352,8 +363,19 @@ class Application(QWidget):
         if i == 'ALL DATA':
             self.selected_tests = [['', 'ALL DATA']]
 
+            self.all_test = self.all_data
+
         else:
             self.selected_tests = Backend.find_tests_of_number(i.split(' - ')[0], self.list_of_test_numbers[1:])
+
+            all_ptr_test = []
+            for i in range(0, len(self.selected_tests)):
+                all_ptr_test.append(Backend.ptr_extractor(self.number_of_sites, self.ptr_data, self.selected_tests[i]))
+
+            # Gathers each set of data from all runs for each site in all selected tests
+            self.all_test = []
+            for i in range(len(all_ptr_test)):
+                self.all_test.append(Backend.single_test_data(self.number_of_sites, all_ptr_test[i]))
 
 
     # Supposedly gets the summary results for all sites in each test (COMPLETELY STOLEN FROM BACKEND LOL)
@@ -390,6 +412,79 @@ class Application(QWidget):
         self.progress_bar.setValue(95)
 
         return table
+
+
+    # Given a set of data for each test, the full set of ptr data, the number of sites, and the list of names/tests for the
+    #   set of data needed, expect each item in this set of data to be plotted in a new figure
+    # test_list_data should be an array of arrays of arrays with the same length as test_list, which is an array of tuples
+    #   with each tuple representing the test number and name of the test data in that specific trial
+    def plot_list_of_tests(self):
+
+        if self.file_selected:
+
+            # Runs through each of the tests in the list and plots it in a new figure
+            self.progress_bar.setValue(0)
+
+            pp = PdfFileMerger()
+
+            if self.selected_tests == [['', 'ALL DATA']]:
+
+                for i in range(1, len(self.list_of_test_numbers)):
+
+                    pdfTemp = PdfPages(str(self.file_path + "_results_temp"))
+
+                    plt.figure(figsize=(11, 8.5))
+                    pdfTemp.savefig(Backend.plot_everything_from_one_test(self.all_data[i - 1], self.ptr_data, self.number_of_sites, self.list_of_test_numbers[i]))
+
+                    pdfTemp.close()
+
+                    pp.append(PdfFileReader(str(self.file_path + "_results_temp"), "rb"))
+
+                    self.status_text.setText(str(i) + "/" + str(len(self.list_of_test_numbers[1:])) + " test results completed")
+
+                    self.progress_bar.setValue((i + 1) / len(self.list_of_test_numbers[1:]) * 90)
+
+                    plt.close()
+
+            else:
+
+                for i in range(0, len(self.selected_tests)):
+
+                    pdfTemp = PdfPages(str(self.file_path + "_results_temp"))
+
+                    plt.figure(figsize=(11, 8.5))
+                    pdfTemp.savefig(Backend.plot_everything_from_one_test(self.all_test[i], self.ptr_data, self.number_of_sites, self.selected_tests[i]))
+
+                    pdfTemp.close()
+
+                    pp.append(PdfFileReader(str(self.file_path + "_results_temp"), "rb"))
+
+                    self.status_text.setText(str(i) + "/" + str(len(self.selected_tests)) + " test results completed")
+
+                    self.progress_bar.setValue((i + 1) / len(self.selected_tests) * 90)
+
+                    plt.close()
+
+            os.remove(str(self.file_path + "_results_temp"))
+
+            # Makes sure that the pdf isn't open and prompts you to close it if it is
+            written = False
+            while not written:
+                try:
+                    pp.write(str(self.file_path + "_results.pdf"))
+                    self.status_text.setText('PDF written successfully!')
+                    self.progress_bar.setValue(100)
+                    written = True
+
+                except PermissionError:
+                    self.status_text.setText(str('Please close ' + str(self.file_path + "_results.pdf") + ' and try again.'))
+                    time.sleep(1)
+                    self.progress_bar.setValue(99)
+
+        else:
+
+            self.status_text.setText('Please select a file')
+
 
 
 ###################################################
@@ -464,49 +559,6 @@ class Application(QWidget):
 # This is horrible design and I'm so sorry, but here's a huge library full of static methods for processing the data
 # These were all taken virtually verbatim from the previous program so have mercy on me
 class Backend(ABC):
-
-    # Given a set of data for each test, the full set of ptr data, the number of sites, and the list of names/tests for the
-    #   set of data needed, expect each item in this set of data to be plotted in a new figure
-    # test_list_data should be an array of arrays of arrays with the same length as test_list, which is an array of tuples
-    #   with each tuple representing the test number and name of the test data in that specific trial
-    @staticmethod
-    def plot_list_of_tests(test_list_data, data, num_of_sites, test_list, directory):
-        # Runs through each of the tests in the list and plots it in a new figure
-        pp = PdfFileMerger()
-
-        for i in range(0, len(test_list)):
-
-            pdfTemp = PdfPages(str(directory + "_results_temp"))
-
-            plt.figure(figsize=(11, 8.5))
-            pdfTemp.savefig(Backend.plot_everything_from_one_test(test_list_data[i], data, num_of_sites, test_list[i]))
-
-            pdfTemp.close()
-
-            pp.append(PdfFileReader(str(directory + "_results_temp"), "rb"))
-
-            if i % 10 == 0:
-                print(str(i) + "/" + str(len(test_list)) + " test results completed")
-
-            plt.close()
-
-        print(str(len(test_list)) + "/" + str(len(test_list)) + " test results completed")
-        print()
-
-        os.remove(str(directory + "_results_temp"))
-
-        # Makes sure that the pdf isn't open and prompts you to close it if it is
-        written = False
-        while not written:
-            try:
-                pp.write(str(directory + "_results.pdf"))
-                print('PDF written successfully!')
-                written = True
-
-            except PermissionError:
-                print(str('Please close ' + str(directory + "_results.pdf") + ' and try again.'))
-                input('Press <Enter> to continue...')
-                print()
 
     # Plots the results of everything from one test
     @staticmethod
@@ -661,7 +713,7 @@ class Backend(ABC):
             cpk_result = str(Decimal(Backend.cpk(volt_data, Backend.db2v(minimum), Backend.db2v(maximum))).quantize(Decimal('0.001')))
 
         # Pass/fail data is stupid
-        elif minimum == maximum:
+        elif minimum == maximum or min(site_data) == max(site_data):
             mean_result = np.mean(site_data)
             std_string = str(np.std(site_data))
             cp_result = 'N/A'
