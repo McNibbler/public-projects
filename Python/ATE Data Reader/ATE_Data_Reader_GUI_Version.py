@@ -95,10 +95,13 @@ class Application(QWidget):
         # Selects a test result for the desired
         self.select_test_menu = QComboBox()
         self.select_test_menu.setToolTip('Select the tests to produce the PDF results for')
+        self.select_test_menu.activated[str].connect(self.selection_change)
 
         # Button to generate the test results for the desired tests from the selected menu
         self.generate_pdf_button = QPushButton('Generate .pdf from selected tests')
         self.generate_pdf_button.setToolTip('Generate a .pdf file with the selected tests from the parsed .txt')
+
+        self.progress_bar = QProgressBar()
 
         self.WINDOW_SIZE = (600, 180)
         self.file_path = None
@@ -110,6 +113,8 @@ class Application(QWidget):
 
         self.test_text = QLabel()
         self.test_text.setText("test")
+
+        self.selected_tests = []
 
         self.file_selected = False
 
@@ -131,6 +136,7 @@ class Application(QWidget):
         layout.addWidget(self.generate_summary_button, 3, 0, 1, 2)
         layout.addWidget(self.select_test_menu, 4, 0)
         layout.addWidget(self.generate_pdf_button, 4, 1)
+        layout.addWidget(self.progress_bar, 5, 0, 1, 2)
 
         # Window settings
         self.show()
@@ -200,9 +206,13 @@ class Application(QWidget):
             # Because you can open it and select nothing smh
             if self.file_path is not '':
 
+                self.progress_bar.setValue(0)
+
                 self.data = open(self.file_path).read().splitlines()
 
-                for i in range(0, len(self.data) - 1):
+                self.progress_bar.setValue(10)
+
+                for i in range(0, len(self.data)):
                     if self.data[i].startswith("FAR"):
                         self.far_data.append(self.data[i])
                     elif self.data[i].startswith("MIR"):
@@ -230,9 +240,12 @@ class Application(QWidget):
                     elif self.data[i].startswith("MRR"):
                         self.mrr_data.append(self.data[i])
 
+                    self.progress_bar.setValue(10 + i/len(self.data) * 40)
+
                 sdr_parse = self.sdr_data[0].split("|")
                 self.number_of_sites = int(sdr_parse[3])
 
+                self.progress_bar.setValue(55)
 
                 self.list_of_test_numbers = [['', 'ALL DATA']]
                 # Gathers a list of the test numbers and the tests ran for each site, avoiding repeats from rerun tests
@@ -242,17 +255,26 @@ class Application(QWidget):
                     else:
                         self.list_of_test_numbers.append([self.ptr_data[i].split("|")[1], self.ptr_data[i].split("|")[7]])
 
-                self.list_of_test_numbers_string = []
+                    self.progress_bar.setValue(55 + i/len(self.ptr_data) * 25)
 
-                for i in range(0, len(self.list_of_test_numbers)):
+                self.list_of_test_numbers_string = ['ALL DATA']
 
-                    self.list_of_test_numbers_string.append(str(self.list_of_test_numbers[i][1]))
+                for i in range(1, len(self.list_of_test_numbers)):
+
+                    self.list_of_test_numbers_string.append(str(
+                        self.list_of_test_numbers[i][0] + ' - ' +self.list_of_test_numbers[i][1]))
+
+                    self.progress_bar.setValue(80 + i / len(self.list_of_test_numbers) * 19)
 
                 self.file_selected = True
 
                 self.select_test_menu.addItems(self.list_of_test_numbers_string)
 
+                self.selected_tests = [['', 'ALL DATA']]
+
                 self.status_text.setText('Parsed .txt uploaded!')
+
+                self.progress_bar.setValue(100)
 
                 self.main_window()
 
@@ -306,6 +328,20 @@ class Application(QWidget):
         else:
 
             self.status_text.setText('Please select a file')
+
+
+    # Chooses the tests to be run for the graphical processing
+    def selection_change(self, i):
+
+        if i == 'ALL DATA':
+            self.selected_tests = [['', 'ALL DATA']]
+
+        else:
+            self.selected_tests = Backend.find_tests_of_number(i.split(' - ')[0], self.list_of_test_numbers[1:])
+
+
+
+
 
 
 ###################################################
