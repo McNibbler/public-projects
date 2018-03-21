@@ -616,12 +616,32 @@ class Backend(ABC):
     # Returns the lower allowed limit of a set of data
     @staticmethod
     def get_plot_min(data, test_tuple, num_of_sites):
-        return Backend.get_plot_extremes(data, test_tuple, num_of_sites)[0]
+        minimum = Backend.get_plot_extremes(data, test_tuple, num_of_sites)[0]
+        try:
+
+            smallboi = float(minimum)
+
+        except ValueError:
+
+            smallboi = 'n/a'
+
+        return smallboi
 
     # Returns the upper allowed limit of a set of data
     @staticmethod
     def get_plot_max(data, test_tuple, num_of_sites):
-        return Backend.get_plot_extremes(data, test_tuple, num_of_sites)[1]
+
+        maximum = Backend.get_plot_extremes(data, test_tuple, num_of_sites)[1]
+
+        try:
+
+            bigboi = float(maximum)
+
+        except ValueError:
+
+            bigboi = 'n/a'
+
+        return bigboi
 
     # Returns the units for a set of data
     @staticmethod
@@ -638,8 +658,8 @@ class Backend(ABC):
         not_found = True
         while not_found:
             if data[temp].split("|")[1] == test_tuple[0]:
-                minimum_test = float(data[temp].split("|")[13])
-                maximum_test = float(data[temp].split("|")[14])
+                minimum_test = (data[temp].split("|")[13])
+                maximum_test = (data[temp].split("|")[14])
                 units = (data[temp].split("|")[15])
                 not_found = False
             temp += num_of_sites
@@ -654,8 +674,17 @@ class Backend(ABC):
             Backend.plot_single_site_trend(test_data[i])
 
         # Plots the minimum and maximum barriers
-        plt.plot(range(0, len(test_data[0])), [minimum] * len(test_data[0]), color="red", linewidth=3.0)
-        plt.plot(range(0, len(test_data[0])), [maximum] * len(test_data[0]), color="red", linewidth=3.0)
+        if minimum == 'n/a':
+            plt.plot(range(0, len(test_data[0])), [0] * len(test_data[0]), color="red", linewidth=3.0)
+            plt.plot(range(0, len(test_data[0])), [maximum] * len(test_data[0]), color="red", linewidth=3.0)
+
+        elif maximum == 'n/a':
+            plt.plot(range(0, len(test_data[0])), [minimum] * len(test_data[0]), color="red", linewidth=3.0)
+            plt.plot(range(0, len(test_data[0])), [max(np.concatenate(test_data, axis=0))] * len(test_data[0]), color="red", linewidth=3.0)
+
+        else:
+            plt.plot(range(0, len(test_data[0])), [minimum] * len(test_data[0]), color="red", linewidth=3.0)
+            plt.plot(range(0, len(test_data[0])), [maximum] * len(test_data[0]), color="red", linewidth=3.0)
 
         # My feeble attempt to get pretty dynamic limits
         expand = max([abs(minimum), abs(maximum)])
@@ -697,8 +726,17 @@ class Backend(ABC):
         # Not actually volts, it's actually % if it's db technically but who cares
         volt_data = []
 
+        # Pass/fail data is stupid
+        if minimum == maximum or min(site_data) == max(site_data):
+            mean_result = np.mean(site_data)
+            std_string = str(np.std(site_data))
+            cp_result = 'N/A'
+            cpl_result = 'N/A'
+            cpu_result = 'N/A'
+            cpk_result = 'N/A'
+
         # The struggles of logarithmic data
-        if units.lower() == 'db':
+        elif 'db' in units.lower():
 
             for i in range(0, len(site_data)):
                 volt_data.append(Backend.db2v(site_data[i]))
@@ -711,15 +749,6 @@ class Backend(ABC):
             cpl_result = str(Decimal(Backend.cpl(volt_data, Backend.db2v(minimum))).quantize(Decimal('0.001')))
             cpu_result = str(Decimal(Backend.cpu(volt_data, Backend.db2v(maximum))).quantize(Decimal('0.001')))
             cpk_result = str(Decimal(Backend.cpk(volt_data, Backend.db2v(minimum), Backend.db2v(maximum))).quantize(Decimal('0.001')))
-
-        # Pass/fail data is stupid
-        elif minimum == maximum or min(site_data) == max(site_data):
-            mean_result = np.mean(site_data)
-            std_string = str(np.std(site_data))
-            cp_result = 'N/A'
-            cpl_result = 'N/A'
-            cpu_result = 'N/A'
-            cpk_result = 'N/A'
 
         # Yummy linear data instead
         else:
@@ -774,12 +803,21 @@ class Backend(ABC):
 
         # Plots each site one at a time
         for i in range(0, len(test_data)):
-            Backend.plot_single_site_hist(test_data[i], minimum, maximum)
+            Backend.plot_single_site_hist(test_data[i], minimum, maximum, test_data)
 
         # My feeble attempt to get pretty dynamic limits
         if minimum == maximum:
             plt.xlim(xmin=0)
             plt.xlim(xmax=1)
+
+        elif minimum == 'n/a':
+            plt.xlim(xmin=0)
+            plt.xlim(xmax=maximum)
+
+        elif maximum == 'n/a':
+            plt.xlim(xmin=minimum)
+            plt.xlim(xmax=max(np.concatenate(test_data, axis=0)))
+
         else:
             plt.xlim(xmin=minimum)
             plt.xlim(xmax=maximum)
@@ -794,12 +832,21 @@ class Backend(ABC):
 
     # Plots a single site's results as a histogram
     @staticmethod
-    def plot_single_site_hist(site_data, minimum, maximum):
+    def plot_single_site_hist(site_data, minimum, maximum, test_data):
         # At the moment the bins are the same as they are in the previous program's results. Will add fail bin later.
 
         # Damn pass/fail data exceptions everywhere
         if minimum == maximum:
             binboi = np.linspace(0, 1, 21)
+
+        elif minimum > maximum:
+            binboi = np.linspace(maximum, minimum, 21)
+
+        elif minimum == 'n/a':
+            binboi = np.linspace(0, maximum, 21)
+
+        elif maximum == 'n/a':
+            binboi = np.linspace(minimum, max(np.concatenate(test_data, axis=0)), 21)
 
         else:
             binboi = np.linspace(minimum, maximum, 21)
