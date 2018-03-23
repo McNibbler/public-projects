@@ -569,6 +569,22 @@ class Backend(ABC):
         hi_lim = Backend.get_plot_max(data, test_tuple, num_of_sites)
         units = Backend.get_units(data, test_tuple, num_of_sites)
 
+        print(test_tuple)
+
+        if low_lim == 'n/a':
+
+            if min(np.concatenate(test_data)) < 0:
+                low_lim = min(np.concatenate(test_data, axis=0))
+
+            else:
+                low_lim = 0
+
+        if hi_lim == 'n/a' or low_lim > hi_lim:
+
+            hi_lim = max(np.concatenate(test_data, axis=0))
+
+
+
         # Title for everything
         plt.suptitle(str("Test: " + test_tuple[0] + " - " + test_tuple[1] + " - Units: " + units))
 
@@ -702,7 +718,7 @@ class Backend(ABC):
         parameters = ['Site', 'Runs', 'Fails', 'Min', 'Mean', 'Max', 'Range', 'STD', 'Cp', 'Cpl', 'Cpu', 'Cpk']
 
         # Clarification
-        if units.lower() == 'db':
+        if 'db' in units.lower():
             parameters[7] = 'STD (%)'
 
         all_data = np.concatenate(test_data, axis=0)
@@ -730,10 +746,10 @@ class Backend(ABC):
         if minimum == maximum or min(site_data) == max(site_data):
             mean_result = np.mean(site_data)
             std_string = str(np.std(site_data))
-            cp_result = 'N/A'
-            cpl_result = 'N/A'
-            cpu_result = 'N/A'
-            cpk_result = 'N/A'
+            cp_result = 'n/a'
+            cpl_result = 'n/a'
+            cpu_result = 'n/a'
+            cpk_result = 'n/a'
 
         # The struggles of logarithmic data
         elif 'db' in units.lower():
@@ -904,33 +920,45 @@ class Backend(ABC):
     # Credit to: countrymarmot on github gist:  https://gist.github.com/countrymarmot/8413981
     @staticmethod
     def cp(site_data, minimum, maximum):
-        sigma = np.std(site_data)
-        cp_value = float(maximum - minimum) / (6 * sigma)
-        return cp_value
+        if minimum == 'n/a' or maximum == 'n/a':
+            return 'n/a'
+        else:
+            sigma = np.std(site_data)
+            cp_value = float(maximum - minimum) / (6 * sigma)
+            return cp_value
 
     @staticmethod
     def cpk(site_data, minimum, maximum):
-        sigma = np.std(site_data)
-        m = np.mean(site_data)
-        cpu_value = float(maximum - m) / (3 * sigma)
-        cpl_value = float(m - minimum) / (3 * sigma)
-        cpk_value = np.min([cpu_value, cpl_value])
-        return cpk_value
+        if minimum == 'n/a' or maximum == 'n/a':
+            return 'n/a'
+        else:
+            sigma = np.std(site_data)
+            m = np.mean(site_data)
+            cpu_value = float(maximum - m) / (3 * sigma)
+            cpl_value = float(m - minimum) / (3 * sigma)
+            cpk_value = np.min([cpu_value, cpl_value])
+            return cpk_value
 
     # One sided calculations (cpl/cpu)
     @staticmethod
     def cpl(site_data, minimum):
-        sigma = np.std(site_data)
-        m = np.mean(site_data)
-        cpl_value = float(m - minimum) / (3 * sigma)
-        return cpl_value
+        if minimum == 'n/a':
+            return 'n/a'
+        else:
+            sigma = np.std(site_data)
+            m = np.mean(site_data)
+            cpl_value = float(m - minimum) / (3 * sigma)
+            return cpl_value
 
     @staticmethod
     def cpu(site_data, maximum):
-        sigma = np.std(site_data)
-        m = np.mean(site_data)
-        cpu_value = float(maximum - m) / (3 * sigma)
-        return cpu_value
+        if maximum == 'n/a':
+            return 'n/a'
+        else:
+            sigma = np.std(site_data)
+            m = np.mean(site_data)
+            cpu_value = float(maximum - m) / (3 * sigma)
+            return cpu_value
 
 
 
