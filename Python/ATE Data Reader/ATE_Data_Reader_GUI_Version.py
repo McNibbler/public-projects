@@ -105,9 +105,14 @@ class Application(QWidget):
         self.generate_pdf_button.setToolTip('Generate a .pdf file with the selected tests from the parsed .txt')
         self.generate_pdf_button.clicked.connect(self.plot_list_of_tests)
 
+        self.limit_toggle = QCheckBox('Plot against failure limits', self)
+        self.limit_toggle.setChecked(True)
+        self.limit_toggle.stateChanged.connect(self.toggler)
+        self.limits_toggled = True
+
         self.progress_bar = QProgressBar()
 
-        self.WINDOW_SIZE = (700, 180)
+        self.WINDOW_SIZE = (700, 200)
         self.file_path = None
         self.text_file_location = self.file_path
 
@@ -141,9 +146,10 @@ class Application(QWidget):
         layout.addWidget(self.stdf_upload_button_xlsx, 1, 1)
         layout.addWidget(self.txt_upload_button, 2, 0, 1, 2)
         layout.addWidget(self.generate_summary_button, 3, 0, 1, 2)
-        layout.addWidget(self.select_test_menu, 4, 0)
-        layout.addWidget(self.generate_pdf_button, 4, 1)
-        layout.addWidget(self.progress_bar, 5, 0, 1, 2)
+        layout.addWidget(self.select_test_menu, 4, 0, 1, 2)
+        layout.addWidget(self.generate_pdf_button, 5, 0)
+        layout.addWidget(self.limit_toggle, 5, 1)
+        layout.addWidget(self.progress_bar, 6, 0, 1, 2)
 
         # Window settings
         self.show()
@@ -193,6 +199,15 @@ class Application(QWidget):
             self.status_text.update()
             FileReaders.to_excel(filepath[0])
             self.status_text.setText(str(filepath[0].split('/')[-1] + '_excel.xlsx created!'))
+
+
+    # Checks if the toggle by limits mark is checked or not
+    def toggler(self, state):
+
+        if state == Qt.Checked:
+            self.limits_toggled = True
+        else:
+            self.limits_toggled = False
 
 
     # Opens and reads a file to parse the data. Much of this is what was done in main() from the text version
@@ -434,7 +449,7 @@ class Application(QWidget):
                     pdfTemp = PdfPages(str(self.file_path + "_results_temp"))
 
                     plt.figure(figsize=(11, 8.5))
-                    pdfTemp.savefig(Backend.plot_everything_from_one_test(self.all_data[i - 1], self.ptr_data, self.number_of_sites, self.list_of_test_numbers[i]))
+                    pdfTemp.savefig(Backend.plot_everything_from_one_test(self.all_data[i - 1], self.ptr_data, self.number_of_sites, self.list_of_test_numbers[i], self.limits_toggled))
 
                     pdfTemp.close()
 
@@ -453,7 +468,7 @@ class Application(QWidget):
                     pdfTemp = PdfPages(str(self.file_path + "_results_temp"))
 
                     plt.figure(figsize=(11, 8.5))
-                    pdfTemp.savefig(Backend.plot_everything_from_one_test(self.all_test[i], self.ptr_data, self.number_of_sites, self.selected_tests[i]))
+                    pdfTemp.savefig(Backend.plot_everything_from_one_test(self.all_test[i], self.ptr_data, self.number_of_sites, self.selected_tests[i], self.limit_toggle))
 
                     pdfTemp.close()
 
@@ -562,7 +577,7 @@ class Backend(ABC):
 
     # Plots the results of everything from one test
     @staticmethod
-    def plot_everything_from_one_test(test_data, data, num_of_sites, test_tuple):
+    def plot_everything_from_one_test(test_data, data, num_of_sites, test_tuple, fail_limit):
 
         # Find the limits
         low_lim = Backend.get_plot_min(data, test_tuple, num_of_sites)
@@ -570,6 +585,11 @@ class Backend(ABC):
         units = Backend.get_units(data, test_tuple, num_of_sites)
 
         print(test_tuple)
+
+
+
+
+
 
         if low_lim == 'n/a':
 
@@ -601,7 +621,7 @@ class Backend(ABC):
 
         # Plots the trendline
         plt.subplot(223)
-        Backend.plot_full_test_trend(test_data, low_lim, hi_lim)
+        Backend.plot_full_test_trend(test_data, low_lim, hi_lim, fail_limit)
         plt.xlabel("Trials")
         plt.ylabel(units)
         plt.title("Trendline")
@@ -609,7 +629,7 @@ class Backend(ABC):
 
         # Plots the histogram
         plt.subplot(224)
-        Backend.plot_full_test_hist(test_data, low_lim, hi_lim)
+        Backend.plot_full_test_hist(test_data, low_lim, hi_lim, fail_limit)
         plt.xlabel(units)
         plt.ylabel("Trials")
         plt.title("Histogram")
@@ -683,7 +703,7 @@ class Backend(ABC):
 
     # Plots the results of all sites from one test
     @staticmethod
-    def plot_full_test_trend(test_data, minimum, maximum):
+    def plot_full_test_trend(test_data, minimum, maximum, fail_limit):
 
         # Plots each site one at a time
         for i in range(0, len(test_data)):
@@ -702,14 +722,19 @@ class Backend(ABC):
             plt.plot(range(0, len(test_data[0])), [minimum] * len(test_data[0]), color="red", linewidth=3.0)
             plt.plot(range(0, len(test_data[0])), [maximum] * len(test_data[0]), color="red", linewidth=3.0)
 
-        # My feeble attempt to get pretty dynamic limits
-        expand = max([abs(minimum), abs(maximum)])
-        if minimum == maximum:
-            plt.ylim(ymin=-0.05)
-            plt.ylim(ymax=1.05)
+        if fail_limit:
+            # My feeble attempt to get pretty dynamic limits
+            expand = max([abs(minimum), abs(maximum)])
+            if minimum == maximum:
+                plt.ylim(ymin=-0.05)
+                plt.ylim(ymax=1.05)
+            else:
+                plt.ylim(ymin=minimum - abs(0.05 * expand))
+                plt.ylim(ymax=maximum + abs(0.05 * expand))
+
         else:
-            plt.ylim(ymin=minimum - abs(0.05 * expand))
-            plt.ylim(ymax=maximum + abs(0.05 * expand))
+            plt.ylim(ymin=min(np.concatenate(test_data, axis=0)))
+            plt.ylim(ymax=max(np.concatenate(test_data, axis=0)))
 
 
     # Returns the table of the results of all the tests to visualize the data
@@ -815,28 +840,51 @@ class Backend(ABC):
 
     # Plots the historgram results of all sites from one test
     @staticmethod
-    def plot_full_test_hist(test_data, minimum, maximum):
+    def plot_full_test_hist(test_data, minimum, maximum, fail_limit):
 
-        # Plots each site one at a time
-        for i in range(0, len(test_data)):
-            Backend.plot_single_site_hist(test_data[i], minimum, maximum, test_data)
 
-        # My feeble attempt to get pretty dynamic limits
-        if minimum == maximum:
-            plt.xlim(xmin=0)
-            plt.xlim(xmax=1)
+        if fail_limit:
 
-        elif minimum == 'n/a':
-            plt.xlim(xmin=0)
-            plt.xlim(xmax=maximum)
+            # Plots each site one at a time
+            for i in range(0, len(test_data)):
+                Backend.plot_single_site_hist(test_data[i], minimum, maximum, test_data)
 
-        elif maximum == 'n/a':
-            plt.xlim(xmin=minimum)
-            plt.xlim(xmax=max(np.concatenate(test_data, axis=0)))
+            # My feeble attempt to get pretty dynamic limits
+            if minimum == maximum:
+                plt.xlim(xmin=0)
+                plt.xlim(xmax=1)
+
+            elif minimum == 'n/a':
+                plt.xlim(xmin=0)
+                plt.xlim(xmax=maximum)
+
+            elif maximum == 'n/a':
+                plt.xlim(xmin=minimum)
+                plt.xlim(xmax=max(np.concatenate(test_data, axis=0)))
+
+            else:
+                plt.xlim(xmin=minimum)
+                plt.xlim(xmax=maximum)
 
         else:
-            plt.xlim(xmin=minimum)
-            plt.xlim(xmax=maximum)
+
+            for i in range(0, len(test_data)):
+                Backend.plot_single_site_hist(test_data[i], min(np.concatenate(test_data, axis=0)), max(np.concatenate(test_data, axis=0)), test_data)
+
+            if minimum == maximum:
+                plt.axvline(x=0)
+                plt.axvline(x=1)
+
+            elif minimum == 'n/a':
+                plt.axvline(x=maximum)
+
+            elif maximum == 'n/a':
+                plt.axvline(x=minimum)
+
+            else:
+                plt.axvline(x=minimum)
+                plt.axvline(x=maximum)
+
 
         plt.ylim(ymin=0)
         plt.ylim(ymax=len(test_data[0]))
