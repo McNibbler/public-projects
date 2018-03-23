@@ -843,47 +843,75 @@ class Backend(ABC):
     def plot_full_test_hist(test_data, minimum, maximum, fail_limit):
 
 
-        if fail_limit:
+        if minimum == 'n/a':
 
-            # Plots each site one at a time
-            for i in range(0, len(test_data)):
-                Backend.plot_single_site_hist(test_data[i], minimum, maximum, test_data)
-
-            # My feeble attempt to get pretty dynamic limits
-            if minimum == maximum:
-                plt.xlim(xmin=0)
-                plt.xlim(xmax=1)
-
-            elif minimum == 'n/a':
-                plt.xlim(xmin=0)
-                plt.xlim(xmax=maximum)
-
-            elif maximum == 'n/a':
-                plt.xlim(xmin=minimum)
-                plt.xlim(xmax=max(np.concatenate(test_data, axis=0)))
-
-            else:
-                plt.xlim(xmin=minimum)
-                plt.xlim(xmax=maximum)
+            new_minimum = min(min(np.concatenate(test_data, axis=0)), 0)
 
         else:
 
-            for i in range(0, len(test_data)):
-                Backend.plot_single_site_hist(test_data[i], min(np.concatenate(test_data, axis=0)), max(np.concatenate(test_data, axis=0)), test_data)
+            new_minimum = min(min(np.concatenate(test_data, axis=0)), minimum)
+
+        if maximum == 'n/a':
+
+            new_maximum = max(np.concatenate(test_data, axis=0))
+
+        else:
+
+            new_maximum = max(max(np.concatenate(test_data, axis=0)), maximum)
+
+        # Plots each site one at a time
+        for i in range(0, len(test_data)):
+            Backend.plot_single_site_hist(test_data[i], new_minimum, new_maximum, test_data)
+
+
+        if fail_limit:
+
+            # My feeble attempt to get pretty dynamic limits
+            if minimum == maximum:
+                plt.xlim(xmin=-0.05)
+                plt.xlim(xmax=1.05)
+
+            elif minimum == 'n/a':
+                expand = abs(maximum)
+                plt.xlim(xmin=-0.05)
+                plt.xlim(xmax=maximum + abs(0.05 * expand))
+
+            elif maximum == 'n/a':
+                expand = max([abs(minimum), abs(max(np.concatenate(test_data, axis=0)))])
+                plt.xlim(xmin=minimum - abs(0.05 * expand))
+                plt.xlim(xmax=max(np.concatenate(test_data, axis=0)) + abs(0.05 * expand))
+
+            else:
+                expand = max([abs(minimum), abs(maximum)])
+                plt.xlim(xmin=minimum - abs(0.05 * expand))
+                plt.xlim(xmax=maximum + abs(0.05 * expand))
+
+        else:
 
             if minimum == maximum:
                 plt.axvline(x=0)
                 plt.axvline(x=1)
+                plt.xlim(xmin=-0.05)
+                plt.xlim(xmax=1.05)
 
             elif minimum == 'n/a':
+                expand = max(abs(maximum))
                 plt.axvline(x=maximum)
+                plt.xlim(xmin=new_minimum - abs(0.05 * expand))
+                plt.xlim(xmax=new_maximum + abs(0.05 * expand))
 
             elif maximum == 'n/a':
+                expand = abs(minimum)
                 plt.axvline(x=minimum)
+                plt.xlim(xmin=new_minimum - abs(0.05 * expand))
+                plt.xlim(xmax=new_maximum + abs(0.05 * expand))
 
             else:
+                expand = max([abs(minimum), abs(maximum)])
                 plt.axvline(x=minimum)
                 plt.axvline(x=maximum)
+                plt.xlim(xmin=new_minimum - abs(0.05 * expand))
+                plt.xlim(xmax=new_maximum + abs(0.05 * expand))
 
 
         plt.ylim(ymin=0)
@@ -901,10 +929,10 @@ class Backend(ABC):
 
         # Damn pass/fail data exceptions everywhere
         if minimum == maximum:
-            binboi = np.linspace(0, 1, 21)
+            binboi = np.linspace(0, maximum, 21)
 
         elif minimum > maximum:
-            binboi = np.linspace(maximum, minimum, 21)
+            binboi = np.linspace(minimum, max(np.concatenate(test_data, axis=0)), 21)
 
         elif minimum == 'n/a':
             binboi = np.linspace(0, maximum, 21)
@@ -915,7 +943,8 @@ class Backend(ABC):
         else:
             binboi = np.linspace(minimum, maximum, 21)
 
-        plt.hist(np.clip(site_data, binboi[0], binboi[-1]), bins=binboi, edgecolor='white', linewidth=0.5)
+        plt.hist(site_data, bins=binboi, edgecolor='white', linewidth=0.5)
+        # np.clip(site_data, binboi[0], binboi[-1])
 
     # Creates an array of arrays that has the raw data for each test site in one particular test
     # Given the integer number of sites under test and the Array result from ptr_extractor for a certain test num + name,
