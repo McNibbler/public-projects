@@ -31,7 +31,7 @@ setwd(my.dir)
 rm(my.dir)
 
 # Uncomment to use RADAR's default program
-# TkRadar()
+TkRadar()
 
 
 # Testing with this file

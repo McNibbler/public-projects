@@ -65,7 +65,7 @@ class Application(QWidget):
 
         # Have to read the imported .txt file but I'm not totally sure how
         self.data = None
-        self.far_data, self.mir_data, self.sdr_data, self.pmr_data, self.pgr_data, self.pir_data, self.ptr_data, self.prr_data, self.tsr_data, self.hbr_data, self.sbr_data, self.pcr_data, self.mrr_data = [], [], [], [], [], [], [], [], [], [], [], [], []
+        self.far_data, self.mir_data, self.sdr_data, self.pmr_data, self.pgr_data, self.pir_data, self.ptr_data, self.prr_data, self.tsr_data, self.hbr_data, self.sbr_data, self.pcr_data, self.mrr_data, self.mpr_data = [], [], [], [], [], [], [], [], [], [], [], [], [], []
 
         self.number_of_sites = None
         self.list_of_test_numbers = [['', 'ALL DATA']]
@@ -247,8 +247,10 @@ class Application(QWidget):
                         self.pgr_data.append(self.data[i])
                     elif self.data[i].startswith("PIR"):
                         self.pir_data.append(self.data[i])
-                    elif self.data[i].startswith("PTR"):
+                    elif self.data[i].startswith("PTR"):  # or self.data[i].startswith("MPR"):
                         self.ptr_data.append(self.data[i])
+                    elif self.data[i].startswith("MPR"):
+                        self.mpr_data.append(self.data[i])
                     elif self.data[i].startswith("PRR"):
                         self.prr_data.append(self.data[i])
                     elif self.data[i].startswith("TSR"):
