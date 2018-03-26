@@ -589,10 +589,6 @@ class Backend(ABC):
         print(test_tuple)
 
 
-
-
-
-
         if low_lim == 'n/a':
 
             if min(np.concatenate(test_data)) < 0:
@@ -706,7 +702,7 @@ class Backend(ABC):
     # Plots the results of all sites from one test
     @staticmethod
     def plot_full_test_trend(test_data, minimum, maximum, fail_limit):
-
+        expand = max([abs(minimum), abs(maximum)])
         # Plots each site one at a time
         for i in range(0, len(test_data)):
             Backend.plot_single_site_trend(test_data[i])
@@ -726,17 +722,15 @@ class Backend(ABC):
 
         if fail_limit:
             # My feeble attempt to get pretty dynamic limits
-            expand = max([abs(minimum), abs(maximum)])
             if minimum == maximum:
                 plt.ylim(ymin=-0.05)
-                plt.ylim(ymax=1.05)
+                plt.ylim(ymax=max(maximum + abs(0.05 * expand), 1.05))
             else:
                 plt.ylim(ymin=minimum - abs(0.05 * expand))
                 plt.ylim(ymax=maximum + abs(0.05 * expand))
-
         else:
-            plt.ylim(ymin=min(np.concatenate(test_data, axis=0)))
-            plt.ylim(ymax=max(np.concatenate(test_data, axis=0)))
+            plt.ylim(ymin=(min(np.concatenate(test_data, axis=0), minimum)))
+            plt.ylim(ymax=(max(np.concatenate(test_data, axis=0), maximum)))
 
 
     # Returns the table of the results of all the tests to visualize the data
