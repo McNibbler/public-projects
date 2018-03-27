@@ -503,6 +503,72 @@ class Application(QWidget):
             self.status_text.setText('Please select a file')
 
 
+# Attempt to utilize multithreading so the program doesn't feel like it's crashing every time I do literally anything
+class ThreadedTasks(QThread):
+
+    def __init__(self, file_path, all_data, ptr_data, number_of_sites, selected_tests, limit_toggle, list_of_test_numbers, parent=None):
+        QThread.__init__(self, parent)
+
+        self.file_path = file_path
+        self.all_data = all_data
+        self.ptr_data = ptr_data
+        self.number_of_sites = number_of_sites
+        self.selected_tests = selected_tests
+        self.limit_toggle = limit_toggle
+        self.list_of_test_numbers = list_of_test_numbers
+
+        self.notify_progress_bar = pyqtSignal(int)
+        self.notify_status_text = pyqtSignal(str)
+
+    def plot_list_of_tests(self):
+
+        self.notify_progress_bar.emit(0)
+
+        pp = PdfFileMerger()
+
+        if self.selected_tests == [['', 'ALL DATA']]:
+
+            for i in range(1, len(self.list_of_test_numbers)):
+
+                pdfTemp = PdfPages(str(self.file_path + "_results_temp"))
+
+                plt.figure(figsize=(11, 8.5))
+                pdfTemp.savefig(Backend.plot_everything_from_one_test(self.all_data[i - 1], self.ptr_data, self.number_of_sites, self.list_of_test_numbers[i], self.limits_toggled))
+
+                pdfTemp.close()
+
+                pp.append(PdfFileReader(str(self.file_path + "_results_temp"), "rb"))
+
+                self.notify_status_text.emit(str(str(i) + "/" + str(len(self.list_of_test_numbers[1:])) + " test results completed"))
+
+                self.notify_progress_bar.emit(int((i + 1) / len(self.list_of_test_numbers[1:]) * 90))
+
+                plt.close()
+
+
+        else:
+
+            for i in range(0, len(self.selected_tests)):
+
+                pdfTemp = PdfPages(str(self.file_path + "_results_temp"))
+
+                plt.figure(figsize=(11, 8.5))
+                pdfTemp.savefig(
+                    Backend.plot_everything_from_one_test(self.all_test[i], self.ptr_data, self.number_of_sites,
+                                                          self.selected_tests[i], self.limit_toggle))
+
+                pdfTemp.close()
+
+                pp.append(PdfFileReader(str(self.file_path + "_results_temp"), "rb"))
+
+                self.status_text.setText(str(i) + "/" + str(len(self.selected_tests)) + " test results completed")
+
+                self.progress_bar.setValue((i + 1) / len(self.selected_tests) * 90)
+
+                plt.close()
+
+
+
 
 ###################################################
 
