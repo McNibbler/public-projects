@@ -703,6 +703,9 @@ class Backend(ABC):
     @staticmethod
     def plot_full_test_trend(test_data, minimum, maximum, fail_limit):
         expand = max([abs(minimum), abs(maximum)])
+        data_min = min(np.concatenate(test_data, axis=0))
+        data_max = max(np.concatenate(test_data, axis=0))
+
         # Plots each site one at a time
         for i in range(0, len(test_data)):
             Backend.plot_single_site_trend(test_data[i])
@@ -729,8 +732,8 @@ class Backend(ABC):
                 plt.ylim(ymin=minimum - abs(0.05 * expand))
                 plt.ylim(ymax=maximum + abs(0.05 * expand))
         else:
-            plt.ylim(ymin=(min(np.concatenate(test_data, axis=0), minimum)))
-            plt.ylim(ymax=(max(np.concatenate(test_data, axis=0), maximum)))
+            plt.ylim(ymin=(min(data_min, minimum - abs(0.05 * expand))))
+            plt.ylim(ymax=(max(data_max, maximum + abs(0.05 * expand))))
 
 
     # Returns the table of the results of all the tests to visualize the data
