@@ -2,7 +2,7 @@
 # ATE STDF Data Reader Python Edition (GUI)       #
 # Version: Beta 0.1                               #
 #                                                 #
-# March 20, 2018                                  #
+# March 28, 2018                                  #
 # Thomas Kaunzinger                               #
 # LTX-Credence / XCerra Corp.                     #
 #                                                 #
@@ -130,7 +130,7 @@ class Application(QWidget):
         self.all_test = []
         self.all_data = self.all_test
 
-        self.threaded_task = ThreadedTasks(file_path=self.file_path, all_data=self.all_data, all_test=self.all_test, ptr_data=self.ptr_data,
+        self.threaded_task = PdfWriterThread(file_path=self.file_path, all_data=self.all_data, all_test=self.all_test, ptr_data=self.ptr_data,
                                            number_of_sites=self.number_of_sites, selected_tests=self.selected_tests,
                                            limits_toggled=self.limits_toggled,
                                            list_of_test_numbers=self.list_of_test_numbers)
@@ -138,6 +138,8 @@ class Application(QWidget):
         self.threaded_task.notify_progress_bar.connect(self.on_progress)
         self.threaded_task.notify_status_text.connect(self.on_update_text)
 
+        self.threaded_text_parser = TextParseThread()
+        self.threaded_text_parser.notify_status_text.connect(self.on_update_text)
 
         self.main_window()
 
@@ -174,6 +176,11 @@ class Application(QWidget):
 
     # Opens and reads a file to parse the data
     def open_parsing_dialog(self):
+
+        # self.threaded_text_parser.start()
+        #
+        # self.main_window()
+
 
         self.status_text.setText('Parsing to .txt, please wait...')
         filterboi = 'STDF (*.stdf *.std)'
@@ -236,6 +243,8 @@ class Application(QWidget):
 
             # Because you can open it and select nothing smh
             if self.file_path is not '':
+
+                self.txt_upload_button.setEnabled(False)
 
                 self.progress_bar.setValue(0)
 
@@ -454,13 +463,16 @@ class Application(QWidget):
                 pp.write(str(self.file_path + "_results.pdf"))
                 is_open = False
 
-            except IOError:
+            except PermissionError:
                 self.status_text.setText(str("Please close " + self.file_path + "_results.pdf"))
                 is_open = True
 
             if not is_open:
 
-                self.threaded_task = ThreadedTasks(file_path=self.file_path, all_data=self.all_data, all_test=self.all_test, ptr_data=self.ptr_data, number_of_sites=self.number_of_sites, selected_tests=self.selected_tests, limits_toggled=self.limits_toggled, list_of_test_numbers=self.list_of_test_numbers)
+                self.generate_pdf_button.setEnabled(False)
+                self.select_test_menu.setEnabled(False)
+
+                self.threaded_task = PdfWriterThread(file_path=self.file_path, all_data=self.all_data, all_test=self.all_test, ptr_data=self.ptr_data, number_of_sites=self.number_of_sites, selected_tests=self.selected_tests, limits_toggled=self.limits_toggled, list_of_test_numbers=self.list_of_test_numbers)
 
                 self.threaded_task.notify_progress_bar.connect(self.on_progress)
                 self.threaded_task.notify_status_text.connect(self.on_update_text)
@@ -539,7 +551,7 @@ class Application(QWidget):
 
 
 # Attempt to utilize multithreading so the program doesn't feel like it's crashing every time I do literally anything
-class ThreadedTasks(QThread):
+class PdfWriterThread(QThread):
 
     notify_progress_bar = pyqtSignal(int)
     notify_status_text = pyqtSignal(str)
@@ -608,6 +620,7 @@ class ThreadedTasks(QThread):
             try:
                 pp.write(str(self.file_path + "_results.pdf"))
                 self.notify_status_text.emit('PDF written successfully!')
+                del pp
                 self.notify_progress_bar.emit(100)
                 written = True
 
@@ -615,6 +628,33 @@ class ThreadedTasks(QThread):
                 self.notify_status_text.emit(str('Please close ' + str(self.file_path + "_results.pdf") + ' and try again.'))
                 time.sleep(1)
                 self.notify_progress_bar.emit(99)
+
+
+
+class TextParseThread(QThread):
+
+    notify_status_text = pyqtSignal(str)
+
+    def __init__(self, parent=None):
+
+        QThread.__init__(self, parent)
+
+    # Opens and reads a file to parse the data
+    def run(self):
+
+        self.notify_status_text.emit('Parsing to .txt, please wait...')
+        filterboi = 'STDF (*.stdf *.std)'
+        filepath = QFileDialog.getOpenFileName(caption='Open STDF File', filter=filterboi)
+
+        if filepath[0] == '':
+
+            self.notify_status_text.emit('Please select a file')
+            pass
+
+        else:
+
+            FileReaders.process_file(filepath[0])
+            self.notify_status_text.emit(str(filepath[0].split('/')[-1] + '_parsed.txt created!'))
 
 
 
