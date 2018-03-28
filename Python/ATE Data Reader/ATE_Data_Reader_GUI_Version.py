@@ -130,16 +130,21 @@ class Application(QWidget):
         self.all_test = []
         self.all_data = self.all_test
 
-        self.threaded_task = PdfWriterThread(file_path=self.file_path, all_data=self.all_data, all_test=self.all_test, ptr_data=self.ptr_data,
-                                           number_of_sites=self.number_of_sites, selected_tests=self.selected_tests,
-                                           limits_toggled=self.limits_toggled,
-                                           list_of_test_numbers=self.list_of_test_numbers)
+        self.threaded_task = PdfWriterThread(file_path=self.file_path, all_data=self.all_data, all_test=self.all_test,
+                                             ptr_data=self.ptr_data, number_of_sites=self.number_of_sites,
+                                             selected_tests=self.selected_tests, limits_toggled=self.limits_toggled,
+                                             list_of_test_numbers=self.list_of_test_numbers)
 
         self.threaded_task.notify_progress_bar.connect(self.on_progress)
         self.threaded_task.notify_status_text.connect(self.on_update_text)
 
         self.threaded_text_parser = TextParseThread()
         self.threaded_text_parser.notify_status_text.connect(self.on_update_text)
+
+        self.generate_pdf_button.setEnabled(False)
+        self.select_test_menu.setEnabled(False)
+        self.generate_summary_button.setEnabled(False)
+        self.limit_toggle.setEnabled(False)
 
         self.main_window()
 
@@ -336,6 +341,11 @@ class Application(QWidget):
 
                 self.progress_bar.setValue(100)
 
+                self.generate_pdf_button.setEnabled(True)
+                self.select_test_menu.setEnabled(True)
+                self.generate_summary_button.setEnabled(True)
+                self.limit_toggle.setEnabled(True)
+
                 self.main_window()
 
             else:
@@ -457,28 +467,21 @@ class Application(QWidget):
 
         if self.file_selected:
 
-            is_open = True
-            try:
-                pp = PdfFileMerger()
-                pp.write(str(self.file_path + "_results.pdf"))
-                is_open = False
+            self.generate_pdf_button.setEnabled(False)
+            self.select_test_menu.setEnabled(False)
+            self.limit_toggle.setEnabled(False)
 
-            except PermissionError:
-                self.status_text.setText(str("Please close " + self.file_path + "_results.pdf"))
-                is_open = True
+            self.threaded_task = PdfWriterThread(file_path=self.file_path, all_data=self.all_data,
+                                                 all_test=self.all_test, ptr_data=self.ptr_data,
+                                                 number_of_sites=self.number_of_sites,
+                                                 selected_tests=self.selected_tests, limits_toggled=self.limits_toggled,
+                                                 list_of_test_numbers=self.list_of_test_numbers)
 
-            if not is_open:
+            self.threaded_task.notify_progress_bar.connect(self.on_progress)
+            self.threaded_task.notify_status_text.connect(self.on_update_text)
 
-                self.generate_pdf_button.setEnabled(False)
-                self.select_test_menu.setEnabled(False)
-
-                self.threaded_task = PdfWriterThread(file_path=self.file_path, all_data=self.all_data, all_test=self.all_test, ptr_data=self.ptr_data, number_of_sites=self.number_of_sites, selected_tests=self.selected_tests, limits_toggled=self.limits_toggled, list_of_test_numbers=self.list_of_test_numbers)
-
-                self.threaded_task.notify_progress_bar.connect(self.on_progress)
-                self.threaded_task.notify_status_text.connect(self.on_update_text)
-
-                self.threaded_task.start()
-                self.main_window()
+            self.threaded_task.start()
+            self.main_window()
 
             # # Runs through each of the tests in the list and plots it in a new figure
             # self.progress_bar.setValue(0)
