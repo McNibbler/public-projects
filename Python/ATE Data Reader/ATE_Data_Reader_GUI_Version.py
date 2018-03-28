@@ -130,7 +130,7 @@ class Application(QWidget):
         self.all_test = []
         self.all_data = self.all_test
 
-        self.threaded_task = ThreadedTasks(file_path=self.file_path, all_data=self.all_data, ptr_data=self.ptr_data,
+        self.threaded_task = ThreadedTasks(file_path=self.file_path, all_data=self.all_data, all_test=self.all_test, ptr_data=self.ptr_data,
                                            number_of_sites=self.number_of_sites, selected_tests=self.selected_tests,
                                            limits_toggled=self.limits_toggled,
                                            list_of_test_numbers=self.list_of_test_numbers)
@@ -460,7 +460,7 @@ class Application(QWidget):
 
             if not is_open:
 
-                self.threaded_task = ThreadedTasks(file_path=self.file_path, all_data=self.all_data, ptr_data=self.ptr_data, number_of_sites=self.number_of_sites, selected_tests=self.selected_tests, limits_toggled=self.limits_toggled, list_of_test_numbers=self.list_of_test_numbers)
+                self.threaded_task = ThreadedTasks(file_path=self.file_path, all_data=self.all_data, all_test=self.all_test, ptr_data=self.ptr_data, number_of_sites=self.number_of_sites, selected_tests=self.selected_tests, limits_toggled=self.limits_toggled, list_of_test_numbers=self.list_of_test_numbers)
 
                 self.threaded_task.notify_progress_bar.connect(self.on_progress)
                 self.threaded_task.notify_status_text.connect(self.on_update_text)
@@ -544,11 +544,12 @@ class ThreadedTasks(QThread):
     notify_progress_bar = pyqtSignal(int)
     notify_status_text = pyqtSignal(str)
 
-    def __init__(self, file_path, all_data, ptr_data, number_of_sites, selected_tests, limits_toggled, list_of_test_numbers, parent=None):
+    def __init__(self, file_path, all_data, all_test, ptr_data, number_of_sites, selected_tests, limits_toggled, list_of_test_numbers, parent=None):
         QThread.__init__(self, parent)
 
         self.file_path = file_path
         self.all_data = all_data
+        self.all_test = all_test
         self.ptr_data = ptr_data
         self.number_of_sites = number_of_sites
         self.selected_tests = selected_tests
