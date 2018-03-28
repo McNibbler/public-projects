@@ -130,6 +130,15 @@ class Application(QWidget):
         self.all_test = []
         self.all_data = self.all_test
 
+        self.threaded_task = ThreadedTasks(file_path=self.file_path, all_data=self.all_data, ptr_data=self.ptr_data,
+                                           number_of_sites=self.number_of_sites, selected_tests=self.selected_tests,
+                                           limits_toggled=self.limits_toggled,
+                                           list_of_test_numbers=self.list_of_test_numbers)
+
+        self.threaded_task.notify_progress_bar.connect(self.on_progress)
+        self.threaded_task.notify_status_text.connect(self.on_update_text)
+
+
         self.main_window()
 
 
@@ -439,74 +448,103 @@ class Application(QWidget):
 
         if self.file_selected:
 
-            # Runs through each of the tests in the list and plots it in a new figure
-            self.progress_bar.setValue(0)
+            is_open = True
+            try:
+                pp = PdfFileMerger()
+                pp.write(str(self.file_path + "_results.pdf"))
+                is_open = False
 
-            pp = PdfFileMerger()
+            except IOError:
+                self.status_text.setText(str("Please close " + self.file_path + "_results.pdf"))
+                is_open = True
 
-            if self.selected_tests == [['', 'ALL DATA']]:
+            if not is_open:
 
-                for i in range(1, len(self.list_of_test_numbers)):
+                self.threaded_task = ThreadedTasks(file_path=self.file_path, all_data=self.all_data, ptr_data=self.ptr_data, number_of_sites=self.number_of_sites, selected_tests=self.selected_tests, limits_toggled=self.limits_toggled, list_of_test_numbers=self.list_of_test_numbers)
 
-                    pdfTemp = PdfPages(str(self.file_path + "_results_temp"))
+                self.threaded_task.notify_progress_bar.connect(self.on_progress)
+                self.threaded_task.notify_status_text.connect(self.on_update_text)
 
-                    plt.figure(figsize=(11, 8.5))
-                    pdfTemp.savefig(Backend.plot_everything_from_one_test(self.all_data[i - 1], self.ptr_data, self.number_of_sites, self.list_of_test_numbers[i], self.limits_toggled))
+                self.threaded_task.start()
+                self.main_window()
 
-                    pdfTemp.close()
-
-                    pp.append(PdfFileReader(str(self.file_path + "_results_temp"), "rb"))
-
-                    self.status_text.setText(str(i) + "/" + str(len(self.list_of_test_numbers[1:])) + " test results completed")
-
-                    self.progress_bar.setValue((i + 1) / len(self.list_of_test_numbers[1:]) * 90)
-
-                    plt.close()
-
-            else:
-
-                for i in range(0, len(self.selected_tests)):
-
-                    pdfTemp = PdfPages(str(self.file_path + "_results_temp"))
-
-                    plt.figure(figsize=(11, 8.5))
-                    pdfTemp.savefig(Backend.plot_everything_from_one_test(self.all_test[i], self.ptr_data, self.number_of_sites, self.selected_tests[i], self.limit_toggle))
-
-                    pdfTemp.close()
-
-                    pp.append(PdfFileReader(str(self.file_path + "_results_temp"), "rb"))
-
-                    self.status_text.setText(str(i) + "/" + str(len(self.selected_tests)) + " test results completed")
-
-                    self.progress_bar.setValue((i + 1) / len(self.selected_tests) * 90)
-
-                    plt.close()
-
-            os.remove(str(self.file_path + "_results_temp"))
-
-            # Makes sure that the pdf isn't open and prompts you to close it if it is
-            written = False
-            while not written:
-                try:
-                    pp.write(str(self.file_path + "_results.pdf"))
-                    self.status_text.setText('PDF written successfully!')
-                    self.progress_bar.setValue(100)
-                    written = True
-
-                except PermissionError:
-                    self.status_text.setText(str('Please close ' + str(self.file_path + "_results.pdf") + ' and try again.'))
-                    time.sleep(1)
-                    self.progress_bar.setValue(99)
+            # # Runs through each of the tests in the list and plots it in a new figure
+            # self.progress_bar.setValue(0)
+            #
+            # pp = PdfFileMerger()
+            #
+            # if self.selected_tests == [['', 'ALL DATA']]:
+            #
+            #     for i in range(1, len(self.list_of_test_numbers)):
+            #
+            #         pdfTemp = PdfPages(str(self.file_path + "_results_temp"))
+            #
+            #         plt.figure(figsize=(11, 8.5))
+            #         pdfTemp.savefig(Backend.plot_everything_from_one_test(self.all_data[i - 1], self.ptr_data, self.number_of_sites, self.list_of_test_numbers[i], self.limits_toggled))
+            #
+            #         pdfTemp.close()
+            #
+            #         pp.append(PdfFileReader(str(self.file_path + "_results_temp"), "rb"))
+            #
+            #         self.status_text.setText(str(i) + "/" + str(len(self.list_of_test_numbers[1:])) + " test results completed")
+            #
+            #         self.progress_bar.setValue((i + 1) / len(self.list_of_test_numbers[1:]) * 90)
+            #
+            #         plt.close()
+            #
+            # else:
+            #
+            #     for i in range(0, len(self.selected_tests)):
+            #
+            #         pdfTemp = PdfPages(str(self.file_path + "_results_temp"))
+            #
+            #         plt.figure(figsize=(11, 8.5))
+            #         pdfTemp.savefig(Backend.plot_everything_from_one_test(self.all_test[i], self.ptr_data, self.number_of_sites, self.selected_tests[i], self.limits_toggled))
+            #
+            #         pdfTemp.close()
+            #
+            #         pp.append(PdfFileReader(str(self.file_path + "_results_temp"), "rb"))
+            #
+            #         self.status_text.setText(str(i) + "/" + str(len(self.selected_tests)) + " test results completed")
+            #
+            #         self.progress_bar.setValue((i + 1) / len(self.selected_tests) * 90)
+            #
+            #         plt.close()
+            #
+            # os.remove(str(self.file_path + "_results_temp"))
+            #
+            # # Makes sure that the pdf isn't open and prompts you to close it if it is
+            # written = False
+            # while not written:
+            #     try:
+            #         pp.write(str(self.file_path + "_results.pdf"))
+            #         self.status_text.setText('PDF written successfully!')
+            #         self.progress_bar.setValue(100)
+            #         written = True
+            #
+            #     except PermissionError:
+            #         self.status_text.setText(str('Please close ' + str(self.file_path + "_results.pdf") + ' and try again.'))
+            #         time.sleep(1)
+            #         self.progress_bar.setValue(99)
 
         else:
 
             self.status_text.setText('Please select a file')
 
+    def on_progress(self, i):
+        self.progress_bar.setValue(i)
+
+    def on_update_text(self, txt):
+        self.status_text.setText(txt)
+
 
 # Attempt to utilize multithreading so the program doesn't feel like it's crashing every time I do literally anything
 class ThreadedTasks(QThread):
 
-    def __init__(self, file_path, all_data, ptr_data, number_of_sites, selected_tests, limit_toggle, list_of_test_numbers, parent=None):
+    notify_progress_bar = pyqtSignal(int)
+    notify_status_text = pyqtSignal(str)
+
+    def __init__(self, file_path, all_data, ptr_data, number_of_sites, selected_tests, limits_toggled, list_of_test_numbers, parent=None):
         QThread.__init__(self, parent)
 
         self.file_path = file_path
@@ -514,13 +552,10 @@ class ThreadedTasks(QThread):
         self.ptr_data = ptr_data
         self.number_of_sites = number_of_sites
         self.selected_tests = selected_tests
-        self.limit_toggle = limit_toggle
+        self.limits_toggled = limits_toggled
         self.list_of_test_numbers = list_of_test_numbers
 
-        self.notify_progress_bar = pyqtSignal(int)
-        self.notify_status_text = pyqtSignal(str)
-
-    def plot_list_of_tests(self):
+    def run(self):
 
         self.notify_progress_bar.emit(0)
 
@@ -545,7 +580,6 @@ class ThreadedTasks(QThread):
 
                 plt.close()
 
-
         else:
 
             for i in range(0, len(self.selected_tests)):
@@ -553,19 +587,33 @@ class ThreadedTasks(QThread):
                 pdfTemp = PdfPages(str(self.file_path + "_results_temp"))
 
                 plt.figure(figsize=(11, 8.5))
-                pdfTemp.savefig(
-                    Backend.plot_everything_from_one_test(self.all_test[i], self.ptr_data, self.number_of_sites,
-                                                          self.selected_tests[i], self.limit_toggle))
+                pdfTemp.savefig(Backend.plot_everything_from_one_test(self.all_test[i], self.ptr_data, self.number_of_sites, self.selected_tests[i], self.limits_toggled))
 
                 pdfTemp.close()
 
                 pp.append(PdfFileReader(str(self.file_path + "_results_temp"), "rb"))
 
-                self.status_text.setText(str(i) + "/" + str(len(self.selected_tests)) + " test results completed")
+                self.notify_status_text.emit(str(str(i) + "/" + str(len(self.selected_tests)) + " test results completed"))
 
-                self.progress_bar.setValue((i + 1) / len(self.selected_tests) * 90)
+                self.notify_progress_bar.emit(int((i + 1) / len(self.selected_tests) * 90))
 
                 plt.close()
+
+        os.remove(str(self.file_path + "_results_temp"))
+
+        # Makes sure that the pdf isn't open and prompts you to close it if it is
+        written = False
+        while not written:
+            try:
+                pp.write(str(self.file_path + "_results.pdf"))
+                self.notify_status_text.emit('PDF written successfully!')
+                self.notify_progress_bar.emit(100)
+                written = True
+
+            except PermissionError:
+                self.notify_status_text.emit(str('Please close ' + str(self.file_path + "_results.pdf") + ' and try again.'))
+                time.sleep(1)
+                self.notify_progress_bar.emit(99)
 
 
 
