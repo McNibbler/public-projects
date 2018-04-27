@@ -39,7 +39,7 @@ const double DESIRED_VOLTAGE_2 = 0.512;
 //const int SDI = 11;
 //const int SDO = 12;
 //const int CLK = 13;
-const int LDAC = 0;
+const int LDAC = 8;
 
 // DAC Information
 const int MAX_BITS = 16;          // Number of Bits after the initial header
@@ -68,7 +68,7 @@ void setup() {
 
   // Initializes the SPI protocol
   SPI.begin();
-  
+
 }
 
 
@@ -143,7 +143,7 @@ void setOutput(double desired1, double desired2, double reference, SPISettings s
     // 010 writes to DAC B
     dacChannel = 2;
     header += dacChannel;
-    
+
     SPI.beginTransaction(settings);
     digitalWrite(SS, LOW);
     SPI.transfer(header);   // transfers 8 bit char header
