@@ -13,7 +13,7 @@ There were a number of useful projects in here and they are still available and 
 
 - My MATLAB multi-stage signal analyzer will now be updated [here](https://github.com/McNibbler/Multi-Stage-Signal-Analyzer).
 
-- My Arduino code for controlling the AD5722/AD5732/AD5752 DACs are now [here](https://github.com/McNibbler/DAC-Controller).
+- My Arduino code for controlling the AD5722/AD5732/AD5752 DACs are now [here](https://github.com/McNibbler/DAC-Controller). (Notice 6/8/2018: this has since evolved into a much more expansive multi-device controller framework )
 
 There are a couple projects in here that have not made it to their own repository, notably something like "First Project" in Python or "test.go", but I feel like these really are not particularly important, and don't need to be transferred.
 These will still remain here for archival purposes, yet again.
